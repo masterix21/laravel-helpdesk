@@ -1,0 +1,21 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_ticket_tags', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ticket_id')->constrained('helpdesk_tickets')->cascadeOnDelete();
+            $table->foreignId('tag_id')->constrained('helpdesk_tags')->cascadeOnDelete();
+            $table->timestamps();
+
+            $table->unique(['ticket_id', 'tag_id']);
+            $table->index('tag_id');
+        });
+    }
+};

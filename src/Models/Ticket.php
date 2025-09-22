@@ -1,0 +1,421 @@
+<?php
+
+namespace LucaLongo\LaravelHelpdesk\Models;
+
+use DateTimeInterface;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\AsArrayObject;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Str;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
+
+class Ticket extends Model
+{
+    use HasFactory;
+
+    protected $table = 'helpdesk_tickets';
+
+    protected $guarded = [];
+
+    protected $casts = [
+        'type' => TicketType::class,
+        'status' => TicketStatus::class,
+        'priority' => TicketPriority::class,
+        'meta' => AsArrayObject::class,
+        'opened_at' => 'datetime',
+        'closed_at' => 'datetime',
+        'due_at' => 'datetime',
+        'first_response_at' => 'datetime',
+        'first_response_due_at' => 'datetime',
+        'resolution_due_at' => 'datetime',
+        'sla_breached' => 'boolean',
+    ];
+
+    protected $dates = [
+        'created_at',
+        'updated_at',
+        'opened_at',
+        'closed_at',
+        'due_at',
+        'first_response_at',
+        'first_response_due_at',
+        'resolution_due_at',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(static function (self $ticket): void {
+            if ($ticket->ulid === null) {
+                $ticket->ulid = (string) Str::ulid();
+            }
+
+            if ($ticket->opened_at !== null) {
+                return;
+            }
+
+            $ticket->opened_at = now();
+        });
+    }
+
+    public function opener(): MorphTo
+    {
+        return $this->morphTo('opened_by');
+    }
+
+    public function assignee(): MorphTo
+    {
+        return $this->morphTo('assigned_to');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TicketComment::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(TicketSubscription::class);
+    }
+
+    public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            Category::class,
+            'helpdesk_ticket_categories',
+            'ticket_id',
+            'category_id'
+        )->withTimestamps();
+    }
+
+    public function tags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            Tag::class,
+            'helpdesk_ticket_tags',
+            'ticket_id',
+            'tag_id'
+        )->withTimestamps();
+    }
+
+    public function transitionTo(TicketStatus $next): bool
+    {
+        if ($this->status->canTransitionTo($next) === false) {
+            return false;
+        }
+
+        if ($this->status === $next) {
+            return false;
+        }
+
+        $this->status = $next;
+        $this->closed_at = $next->isTerminal() ? now() : null;
+
+        return $this->save();
+    }
+
+    public function assignTo(?Model $assignee): bool
+    {
+        if ($assignee === null) {
+            return $this->releaseAssignment();
+        }
+
+        if ($this->isAssignedTo($assignee)) {
+            return false;
+        }
+
+        $this->assigned_to_type = $assignee->getMorphClass();
+        $this->assigned_to_id = $assignee->getKey();
+
+        return $this->save();
+    }
+
+    public function releaseAssignment(): bool
+    {
+        if ($this->assigned_to_type === null && $this->assigned_to_id === null) {
+            return false;
+        }
+
+        $this->assigned_to_type = null;
+        $this->assigned_to_id = null;
+
+        return $this->save();
+    }
+
+    public function isAssignedTo(Model $assignee): bool
+    {
+        if ($this->assigned_to_type === null || $this->assigned_to_id === null) {
+            return false;
+        }
+
+        return $this->assigned_to_type === $assignee->getMorphClass()
+            && (string) $this->assigned_to_id === (string) $assignee->getKey();
+    }
+
+    public function shouldQueueSlaAlert(): bool
+    {
+        if ($this->due_at === null) {
+            return false;
+        }
+
+        if ($this->status->isTerminal()) {
+            return false;
+        }
+
+        return now()->greaterThanOrEqualTo($this->due_at);
+    }
+
+    #[Scope]
+    public function forType(Builder $query, TicketType|string $type): void
+    {
+        $value = $type instanceof TicketType ? $type->value : $type;
+
+        $query->where('type', $value);
+    }
+
+    #[Scope]
+    public function withPriority(Builder $query, TicketPriority|string $priority): void
+    {
+        $value = $priority instanceof TicketPriority ? $priority->value : $priority;
+
+        $query->where('priority', $value);
+    }
+
+    #[Scope]
+    public function open(Builder $query): void
+    {
+        $query->where('status', TicketStatus::Open->value);
+    }
+
+    #[Scope]
+    public function approachingSla(Builder $query, int $withinMinutes = 60): void
+    {
+        $threshold = now()->addMinutes($withinMinutes);
+
+        $query->where('sla_breached', false)
+            ->where(function (Builder $q) use ($threshold) {
+                $q->where(function (Builder $subQuery) use ($threshold) {
+                    $subQuery->whereNotNull('first_response_due_at')
+                        ->whereNull('first_response_at')
+                        ->where('first_response_due_at', '<=', $threshold);
+                })->orWhere(function (Builder $subQuery) use ($threshold) {
+                    $subQuery->whereNotNull('resolution_due_at')
+                        ->whereNull('closed_at')
+                        ->where('resolution_due_at', '<=', $threshold);
+                });
+            });
+    }
+
+    #[Scope]
+    public function overdueSla(Builder $query): void
+    {
+        $query->where('sla_breached', false)
+            ->where(function (Builder $q) {
+                $q->where(function (Builder $subQuery) {
+                    $subQuery->whereNotNull('first_response_due_at')
+                        ->whereNull('first_response_at')
+                        ->where('first_response_due_at', '<', now());
+                })->orWhere(function (Builder $subQuery) {
+                    $subQuery->whereNotNull('resolution_due_at')
+                        ->whereNull('closed_at')
+                        ->where('resolution_due_at', '<', now());
+                });
+            });
+    }
+
+    #[Scope]
+    public function breachedSla(Builder $query): void
+    {
+        $query->where('sla_breached', true);
+    }
+
+    #[Scope]
+    public function withCategories(Builder $query, array|int $categoryIds): void
+    {
+        $query->whereHas('categories', function (Builder $q) use ($categoryIds) {
+            $q->whereIn('category_id', (array) $categoryIds);
+        });
+    }
+
+    #[Scope]
+    public function withAnyCategories(Builder $query, array|int $categoryIds): void
+    {
+        $query->whereHas('categories', function (Builder $q) use ($categoryIds) {
+            $q->whereIn('category_id', (array) $categoryIds);
+        });
+    }
+
+    #[Scope]
+    public function withAllCategories(Builder $query, array $categoryIds): void
+    {
+        foreach ($categoryIds as $categoryId) {
+            $query->whereHas('categories', function (Builder $q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+    }
+
+    #[Scope]
+    public function withTags(Builder $query, array|int $tagIds): void
+    {
+        $query->whereHas('tags', function (Builder $q) use ($tagIds) {
+            $q->whereIn('tag_id', (array) $tagIds);
+        });
+    }
+
+    #[Scope]
+    public function withAnyTags(Builder $query, array|int $tagIds): void
+    {
+        $query->whereHas('tags', function (Builder $q) use ($tagIds) {
+            $q->whereIn('tag_id', (array) $tagIds);
+        });
+    }
+
+    #[Scope]
+    public function withAllTags(Builder $query, array $tagIds): void
+    {
+        foreach ($tagIds as $tagId) {
+            $query->whereHas('tags', function (Builder $q) use ($tagId) {
+                $q->where('tag_id', $tagId);
+            });
+        }
+    }
+
+    #[Scope]
+    public function inCategory(Builder $query, int|Category $category): void
+    {
+        $categoryId = $category instanceof Category ? $category->id : $category;
+
+        if ($category instanceof Category) {
+            // Load descendants efficiently with eager loading
+            $category->load('children.children');
+            $descendantIds = $category->getAllDescendants()->pluck('id')->toArray();
+            $categoryIds = array_merge([$categoryId], $descendantIds);
+
+            $query->whereHas('categories', function (Builder $q) use ($categoryIds) {
+                $q->whereIn('category_id', $categoryIds);
+            });
+        } else {
+            $query->whereHas('categories', function (Builder $q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+    }
+
+    #[Scope]
+    public function withinSla(Builder $query): void
+    {
+        $query->where('sla_breached', false)
+            ->where(function (Builder $q) {
+                $q->where(function (Builder $subQuery) {
+                    $subQuery->whereNull('first_response_due_at')
+                        ->orWhereNotNull('first_response_at')
+                        ->orWhere('first_response_due_at', '>=', now());
+                })->where(function (Builder $subQuery) {
+                    $subQuery->whereNull('resolution_due_at')
+                        ->orWhereNotNull('closed_at')
+                        ->orWhere('resolution_due_at', '>=', now());
+                });
+            });
+    }
+
+    public function isFirstResponseOverdue(): bool
+    {
+        if ($this->first_response_at !== null) {
+            return false;
+        }
+
+        if ($this->first_response_due_at === null) {
+            return false;
+        }
+
+        return now()->greaterThan($this->first_response_due_at);
+    }
+
+    public function isResolutionOverdue(): bool
+    {
+        if ($this->status->isTerminal()) {
+            return false;
+        }
+
+        if ($this->resolution_due_at === null) {
+            return false;
+        }
+
+        return now()->greaterThan($this->resolution_due_at);
+    }
+
+    public function getSlaCompliancePercentage(string $type = 'first_response'): ?float
+    {
+        $dueField = $type === 'first_response' ? 'first_response_due_at' : 'resolution_due_at';
+        $responseField = $type === 'first_response' ? 'first_response_at' : 'closed_at';
+
+        if ($this->$dueField === null) {
+            return null;
+        }
+
+        $totalMinutes = $this->opened_at->diffInMinutes($this->$dueField);
+
+        if ($this->$responseField !== null) {
+            $usedMinutes = $this->opened_at->diffInMinutes($this->$responseField);
+        } else {
+            $usedMinutes = $this->opened_at->diffInMinutes(now());
+        }
+
+        if ($totalMinutes === 0) {
+            return 0;
+        }
+
+        $percentage = (1 - ($usedMinutes / $totalMinutes)) * 100;
+
+        return max(0, min(100, $percentage));
+    }
+
+    public function markFirstResponse(): bool
+    {
+        if ($this->first_response_at !== null) {
+            return false;
+        }
+
+        $this->first_response_at = now();
+        $this->response_time_minutes = $this->opened_at->diffInMinutes($this->first_response_at);
+
+        if ($this->first_response_due_at && $this->first_response_at->greaterThan($this->first_response_due_at)) {
+            $this->sla_breached = true;
+            $this->sla_breach_type = 'first_response';
+        }
+
+        return $this->save();
+    }
+
+    public function markResolution(): bool
+    {
+        if (! $this->status->isTerminal()) {
+            return false;
+        }
+
+        $this->resolution_time_minutes = $this->opened_at->diffInMinutes($this->closed_at ?? now());
+
+        if ($this->resolution_due_at && ($this->closed_at ?? now())->greaterThan($this->resolution_due_at)) {
+            $this->sla_breached = true;
+            $this->sla_breach_type = $this->sla_breach_type ?? 'resolution';
+        }
+
+        return $this->save();
+    }
+
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+}

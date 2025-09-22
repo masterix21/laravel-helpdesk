@@ -1,0 +1,47 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_tickets', function (Blueprint $table) {
+            $table->id();
+            $table->ulid('ulid')->unique();
+            $table->string('type')->default(TicketType::ProductSupport->value);
+            $table->string('subject');
+            $table->text('description')->nullable();
+            $table->string('status')->default(TicketStatus::default()->value);
+            $table->string('priority')->default(TicketPriority::default()->value);
+            $table->json('meta')->nullable();
+            $table->timestamp('opened_at')->nullable();
+            $table->timestamp('closed_at')->nullable();
+            $table->timestamp('due_at')->nullable();
+            $table->timestamp('first_response_at')->nullable();
+            $table->timestamp('first_response_due_at')->nullable();
+            $table->timestamp('resolution_due_at')->nullable();
+            $table->boolean('sla_breached')->default(false);
+            $table->string('sla_breach_type')->nullable();
+            $table->integer('response_time_minutes')->nullable();
+            $table->integer('resolution_time_minutes')->nullable();
+            $table->nullableMorphs('opened_by');
+            $table->nullableMorphs('assigned_to');
+            $table->timestamps();
+
+            $table->index(['first_response_due_at', 'status']);
+            $table->index(['resolution_due_at', 'status']);
+            $table->index('sla_breached');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_tickets');
+    }
+};
