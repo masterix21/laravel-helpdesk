@@ -2,9 +2,9 @@
 
 namespace LucaLongo\LaravelHelpdesk\Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Models\ResponseTemplate;
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ResponseTemplateFactory extends Factory
 {

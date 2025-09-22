@@ -2,11 +2,11 @@
 
 namespace LucaLongo\LaravelHelpdesk\Services;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Models\ResponseTemplate;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Auth;
 
 class ResponseTemplateService
 {

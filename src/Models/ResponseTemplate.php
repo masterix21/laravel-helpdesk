@@ -2,9 +2,9 @@
 
 namespace LucaLongo\LaravelHelpdesk\Models;
 
-use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 
 class ResponseTemplate extends Model
 {

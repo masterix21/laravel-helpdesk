@@ -1,16 +1,16 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use LucaLongo\LaravelHelpdesk\Database\Factories\ResponseTemplateFactory;
 use LucaLongo\LaravelHelpdesk\Database\Factories\TicketFactory;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Models\ResponseTemplate;
 use LucaLongo\LaravelHelpdesk\Services\ResponseTemplateService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->service = new ResponseTemplateService();
+    $this->service = new ResponseTemplateService;
 });
 
 it('can create a response template', function () {
