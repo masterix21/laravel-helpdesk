@@ -43,6 +43,16 @@ enum TicketStatus: string
         return self::Open;
     }
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::Open => 'Open',
+            self::InProgress => 'In Progress',
+            self::Resolved => 'Resolved',
+            self::Closed => 'Closed',
+        };
+    }
+
     public function isTerminal(): bool
     {
         return $this === self::Closed;

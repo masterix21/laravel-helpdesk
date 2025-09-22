@@ -297,8 +297,7 @@ class Ticket extends Model
         $categoryId = $category instanceof Category ? $category->id : $category;
 
         if ($category instanceof Category) {
-            // Load descendants efficiently with eager loading
-            $category->load('children.children');
+            // Get all descendant IDs efficiently
             $descendantIds = $category->getAllDescendants()->pluck('id')->toArray();
             $categoryIds = array_merge([$categoryId], $descendantIds);
 

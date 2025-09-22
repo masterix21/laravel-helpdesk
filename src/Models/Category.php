@@ -56,11 +56,29 @@ class Category extends Model
     public function getAllDescendants(): \Illuminate\Support\Collection
     {
         $descendants = collect();
-        $children = $this->children()->with('children')->get();
+        $toProcess = collect([$this]);
+        $processed = collect();
 
-        foreach ($children as $child) {
-            $descendants->push($child);
-            $descendants = $descendants->merge($child->getAllDescendants());
+        // Load all categories with their children in a single query
+        $allCategories = self::with('children')->get()->keyBy('id');
+
+        while ($toProcess->isNotEmpty()) {
+            $current = $toProcess->shift();
+
+            if ($processed->contains('id', $current->id)) {
+                continue;
+            }
+
+            $processed->push($current);
+
+            $category = $allCategories->get($current->id) ?? $current;
+
+            foreach ($category->children as $child) {
+                if (! $descendants->contains('id', $child->id)) {
+                    $descendants->push($child);
+                    $toProcess->push($child);
+                }
+            }
         }
 
         return $descendants;
@@ -68,16 +86,41 @@ class Category extends Model
 
     public function getAllAncestors(): \Illuminate\Support\Collection
     {
-        $ancestors = collect();
-        $current = $this;
+        if ($this->parent_id === null) {
+            return collect();
+        }
 
-        while ($current->parent_id !== null) {
-            $parent = self::find($current->parent_id);
-            if ($parent === null) {
-                break;
+        $ancestors = collect();
+        $parentIds = [];
+        $currentParentId = $this->parent_id;
+        $maxDepth = 100; // Prevent infinite loops
+        $depth = 0;
+
+        // First, collect all parent IDs we need to fetch
+        $tempParentId = $this->parent_id;
+        while ($tempParentId !== null && $depth < $maxDepth) {
+            $parentIds[] = $tempParentId;
+            $depth++;
+            // We'll update this after fetching categories
+            $tempParentId = null;
+        }
+
+        // Load all categories we might need in a single query
+        if (! empty($parentIds)) {
+            $allCategories = self::get()->keyBy('id');
+
+            // Now traverse the ancestry chain
+            $currentParentId = $this->parent_id;
+            while ($currentParentId !== null) {
+                $parent = $allCategories->get($currentParentId);
+
+                if ($parent === null) {
+                    break;
+                }
+
+                $ancestors->push($parent);
+                $currentParentId = $parent->parent_id;
             }
-            $ancestors->push($parent);
-            $current = $parent;
         }
 
         return $ancestors;

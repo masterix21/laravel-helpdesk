@@ -180,15 +180,28 @@ class CategoryService
 
         $newCategory = $this->create($data);
 
-        // Eager load children to avoid N+1
-        $children = $category->children()->get();
+        // Recursively duplicate children with eager loading
+        $this->duplicateChildren($category, $newCategory);
+
+        return $newCategory;
+    }
+
+    private function duplicateChildren(Category $source, Category $target): void
+    {
+        // Load children with their descendants
+        $children = $source->children()->get();
+
         foreach ($children as $child) {
             $childData = $child->toArray();
             unset($childData['id'], $childData['created_at'], $childData['updated_at'], $childData['slug']);
-            $childData['parent_id'] = $newCategory->id;
-            $this->create($childData);
-        }
+            $childData['parent_id'] = $target->id;
 
-        return $newCategory;
+            // Create the child and recursively duplicate its children
+            $newChild = $this->create($childData);
+
+            if ($child->children()->exists()) {
+                $this->duplicateChildren($child, $newChild);
+            }
+        }
     }
 }

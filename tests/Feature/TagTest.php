@@ -138,9 +138,9 @@ it('can get unused tags', function () {
 });
 
 it('can search tags', function () {
-    Tag::factory()->create(['name' => 'bug']);
-    Tag::factory()->create(['name' => 'feature']);
-    Tag::factory()->create(['name' => 'bugfix']);
+    Tag::factory()->active()->create(['name' => 'bug']);
+    Tag::factory()->active()->create(['name' => 'feature']);
+    Tag::factory()->active()->create(['name' => 'bugfix']);
 
     $results = $this->tagService->searchTags('bug');
 

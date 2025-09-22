@@ -2,6 +2,7 @@
 
 namespace LucaLongo\LaravelHelpdesk;
 
+use LucaLongo\LaravelHelpdesk\Services\ResponseTemplateService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -20,12 +21,14 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
             ->hasMigration('create_helpdesk_categories_table')
             ->hasMigration('create_helpdesk_tags_table')
             ->hasMigration('create_helpdesk_ticket_categories_table')
-            ->hasMigration('create_helpdesk_ticket_tags_table');
+            ->hasMigration('create_helpdesk_ticket_tags_table')
+            ->hasMigration('create_helpdesk_response_templates_table');
     }
 
     public function registeringPackage(): void
     {
         $this->app->singleton(TicketService::class, static fn () => new TicketService);
+        $this->app->singleton(ResponseTemplateService::class, static fn () => new ResponseTemplateService);
         $this->app->singleton(LaravelHelpdesk::class, static fn ($app) => new LaravelHelpdesk($app->make(TicketService::class)));
     }
 }
