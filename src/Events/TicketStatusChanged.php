@@ -16,6 +16,5 @@ readonly class TicketStatusChanged
         public Ticket $ticket,
         public TicketStatus $previous,
         public TicketStatus $next,
-    ) {
-    }
+    ) {}
 }

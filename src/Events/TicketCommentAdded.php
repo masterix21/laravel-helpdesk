@@ -11,7 +11,5 @@ readonly class TicketCommentAdded
     use Dispatchable;
     use SerializesModels;
 
-    public function __construct(public TicketComment $comment)
-    {
-    }
+    public function __construct(public TicketComment $comment) {}
 }

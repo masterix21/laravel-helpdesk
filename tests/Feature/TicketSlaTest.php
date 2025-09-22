@@ -1,12 +1,10 @@
 <?php
 
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Event;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
-use LucaLongo\LaravelHelpdesk\Tests\Fakes\Agent;
 
 beforeEach(function () {
     config([

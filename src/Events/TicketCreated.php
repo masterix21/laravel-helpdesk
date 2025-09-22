@@ -11,7 +11,5 @@ readonly class TicketCreated
     use Dispatchable;
     use SerializesModels;
 
-    public function __construct(public Ticket $ticket)
-    {
-    }
+    public function __construct(public Ticket $ticket) {}
 }

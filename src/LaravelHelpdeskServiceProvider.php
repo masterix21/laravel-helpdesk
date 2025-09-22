@@ -2,7 +2,6 @@
 
 namespace LucaLongo\LaravelHelpdesk;
 
-use LucaLongo\LaravelHelpdesk\LaravelHelpdesk;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -26,7 +25,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
 
     public function registeringPackage(): void
     {
-        $this->app->singleton(TicketService::class, static fn () => new TicketService());
+        $this->app->singleton(TicketService::class, static fn () => new TicketService);
         $this->app->singleton(LaravelHelpdesk::class, static fn ($app) => new LaravelHelpdesk($app->make(TicketService::class)));
     }
 }

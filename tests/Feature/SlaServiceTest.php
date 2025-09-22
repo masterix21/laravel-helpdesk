@@ -35,7 +35,7 @@ beforeEach(function () {
 });
 
 it('calculates SLA due dates based on priority', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->make([
         'priority' => TicketPriority::Urgent,
@@ -56,7 +56,7 @@ it('calculates SLA due dates based on priority', function () {
 });
 
 it('applies type-specific overrides for SLA', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->make([
         'priority' => TicketPriority::High,
@@ -77,7 +77,7 @@ it('applies type-specific overrides for SLA', function () {
 it('does not set SLA dates when disabled', function () {
     config(['helpdesk.sla.enabled' => false]);
 
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->make([
         'priority' => TicketPriority::Urgent,
@@ -91,7 +91,7 @@ it('does not set SLA dates when disabled', function () {
 });
 
 it('checks SLA compliance correctly', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->create([
         'priority' => TicketPriority::Normal,
@@ -110,7 +110,7 @@ it('checks SLA compliance correctly', function () {
 });
 
 it('detects overdue tickets', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->create([
         'opened_at' => now()->subHours(5),
@@ -126,7 +126,7 @@ it('detects overdue tickets', function () {
 });
 
 it('records SLA breach when conditions are met', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->create([
         'opened_at' => now()->subHours(5),
@@ -143,7 +143,7 @@ it('records SLA breach when conditions are met', function () {
 });
 
 it('does not record breach if already breached', function () {
-    $service = new SlaService();
+    $service = new SlaService;
 
     $ticket = Ticket::factory()->create([
         'opened_at' => now()->subHours(5),

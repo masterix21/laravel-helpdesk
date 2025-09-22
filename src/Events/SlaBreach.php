@@ -15,6 +15,5 @@ class SlaBreach
         public Ticket $ticket,
         public string $breachType,
         public int $minutesOverdue
-    ) {
-    }
+    ) {}
 }

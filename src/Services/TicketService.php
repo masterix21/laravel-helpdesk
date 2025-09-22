@@ -4,7 +4,6 @@ namespace LucaLongo\LaravelHelpdesk\Services;
 
 use ArrayAccess;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
@@ -19,15 +18,13 @@ use LucaLongo\LaravelHelpdesk\Events\TicketSubscriptionTriggered;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketComment;
 use LucaLongo\LaravelHelpdesk\Models\TicketSubscription;
-use LucaLongo\LaravelHelpdesk\Services\SlaService;
 use LucaLongo\LaravelHelpdesk\Support\HelpdeskConfig;
 
 class TicketService
 {
     public function __construct(
-        protected SlaService $slaService = new SlaService()
-    ) {
-    }
+        protected SlaService $slaService = new SlaService
+    ) {}
 
     public function open(array $attributes, ?Model $openedBy = null): Ticket
     {

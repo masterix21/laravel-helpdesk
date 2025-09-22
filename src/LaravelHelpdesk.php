@@ -10,9 +10,7 @@ use LucaLongo\LaravelHelpdesk\Services\TicketService;
 
 class LaravelHelpdesk
 {
-    public function __construct(protected readonly TicketService $tickets)
-    {
-    }
+    public function __construct(protected readonly TicketService $tickets) {}
 
     public function openTicket(array $attributes, ?Model $openedBy = null): Ticket
     {

@@ -9,7 +9,7 @@ use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Services\CategoryService;
 
 beforeEach(function () {
-    $this->categoryService = new CategoryService();
+    $this->categoryService = new CategoryService;
 });
 
 it('can create a category', function () {

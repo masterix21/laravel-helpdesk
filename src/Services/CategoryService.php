@@ -13,7 +13,7 @@ class CategoryService
 {
     public function create(array $data): Category
     {
-        if (!isset($data['slug']) && isset($data['name'])) {
+        if (! isset($data['slug']) && isset($data['name'])) {
             $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
         }
 
@@ -175,7 +175,7 @@ class CategoryService
         $data = $category->toArray();
         unset($data['id'], $data['created_at'], $data['updated_at']);
 
-        $data['name'] = $newName ?? $category->name . ' (Copy)';
+        $data['name'] = $newName ?? $category->name.' (Copy)';
         $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
 
         $newCategory = $this->create($data);

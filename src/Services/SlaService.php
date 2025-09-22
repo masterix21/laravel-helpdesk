@@ -2,7 +2,6 @@
 
 namespace LucaLongo\LaravelHelpdesk\Services;
 
-use Illuminate\Support\Carbon;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
@@ -96,6 +95,7 @@ class SlaService
         if ($breached && ! $ticket->sla_breached) {
             $ticket->sla_breached = true;
             $ticket->sla_breach_type = $breachType;
+
             return $ticket->save();
         }
 

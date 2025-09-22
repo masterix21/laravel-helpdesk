@@ -15,6 +15,5 @@ readonly class TicketAssigned
     public function __construct(
         public Ticket $ticket,
         public ?Model $assignee,
-    ) {
-    }
+    ) {}
 }

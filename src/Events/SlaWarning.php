@@ -15,6 +15,5 @@ class SlaWarning
         public Ticket $ticket,
         public string $type,
         public float $percentageRemaining
-    ) {
-    }
+    ) {}
 }

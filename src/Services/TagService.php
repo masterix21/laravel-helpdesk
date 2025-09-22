@@ -14,7 +14,7 @@ class TagService
 {
     public function create(array $data): Tag
     {
-        if (!isset($data['slug']) && isset($data['name'])) {
+        if (! isset($data['slug']) && isset($data['name'])) {
             $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
         }
 

@@ -20,6 +20,5 @@ readonly class TicketSubscriptionTriggered
         public Ticket $ticket,
         public TicketStatus $status,
         public Collection $subscriptions,
-    ) {
-    }
+    ) {}
 }

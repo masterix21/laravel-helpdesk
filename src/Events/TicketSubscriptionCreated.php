@@ -11,7 +11,5 @@ readonly class TicketSubscriptionCreated
     use Dispatchable;
     use SerializesModels;
 
-    public function __construct(public TicketSubscription $subscription)
-    {
-    }
+    public function __construct(public TicketSubscription $subscription) {}
 }

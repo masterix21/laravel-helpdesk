@@ -9,7 +9,7 @@ use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Services\TagService;
 
 beforeEach(function () {
-    $this->tagService = new TagService();
+    $this->tagService = new TagService;
 });
 
 it('can create a tag', function () {
