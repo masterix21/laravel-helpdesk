@@ -4,8 +4,10 @@ namespace LucaLongo\LaravelHelpdesk\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketRelationType;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Events\TicketAssigned;
@@ -13,6 +15,7 @@ use LucaLongo\LaravelHelpdesk\Events\TicketCreated;
 use LucaLongo\LaravelHelpdesk\Events\TicketStatusChanged;
 use LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
+use LucaLongo\LaravelHelpdesk\Models\TicketRelation;
 use LucaLongo\LaravelHelpdesk\Support\HelpdeskConfig;
 
 class TicketService
@@ -36,14 +39,12 @@ class TicketService
             'meta' => $attributes['meta'] ?? [],
         ]);
 
-        // Set ulid explicitly if provided (bypassing fillable)
         if (isset($attributes['ulid'])) {
             $ticket->ulid = $attributes['ulid'];
         } elseif (!$ticket->ulid) {
             $ticket->ulid = (string) Str::ulid();
         }
 
-        // Set opened_at if not provided
         if (!isset($attributes['opened_at'])) {
             $ticket->opened_at = now();
         }
@@ -52,14 +53,13 @@ class TicketService
             $this->associateActor($ticket, $openedBy, 'opened_by');
         }
 
-        // Calculate SLA due dates before saving
         $this->slaService->calculateSlaDueDates($ticket);
 
         $ticket->save();
 
         event(new TicketCreated($ticket));
 
-        return $ticket->fresh(['opener', 'assignee']);
+        return $ticket->load(['opener', 'assignee']);
     }
 
     public function update(Ticket $ticket, array $attributes): Ticket
@@ -111,7 +111,7 @@ class TicketService
         $ticket->fill($changes);
         $ticket->save();
 
-        return $ticket->fresh();
+        return $ticket->refresh();
     }
 
     public function transition(Ticket $ticket, TicketStatus $next): Ticket
@@ -126,12 +126,12 @@ class TicketService
             throw InvalidTransitionException::make($previous, $next);
         }
 
-        $freshTicket = $ticket->fresh();
+        $ticket->refresh();
 
-        event(new TicketStatusChanged($freshTicket, $previous, $next));
-        $this->subscriptionService->notifySubscribers($freshTicket, $next);
+        event(new TicketStatusChanged($ticket, $previous, $next));
+        $this->subscriptionService->notifySubscribers($ticket, $next);
 
-        return $freshTicket;
+        return $ticket;
     }
 
     public function assign(Ticket $ticket, ?Model $assignee): Ticket
@@ -142,9 +142,9 @@ class TicketService
             return $ticket;
         }
 
-        event(new TicketAssigned($ticket->fresh(), $assignee));
+        event(new TicketAssigned($ticket->refresh(), $assignee));
 
-        return $ticket->fresh();
+        return $ticket;
     }
 
 
@@ -197,6 +197,136 @@ class TicketService
         }
 
         return $ticket->assignTo($assignee);
+    }
+
+    public function mergeTickets(Ticket $target, Ticket|array $sources, ?string $reason = null): Ticket
+    {
+        $sourceTickets = is_array($sources) ? $sources : [$sources];
+
+        DB::transaction(function () use ($target, $sourceTickets, $reason) {
+            foreach ($sourceTickets as $source) {
+                if ($source->id === $target->id) {
+                    continue;
+                }
+
+                if ($source->isMerged()) {
+                    throw new \InvalidArgumentException(__('Ticket :ticket is already merged', ['ticket' => $source->ticket_number]));
+                }
+
+                // Transfer comments
+                $source->comments()->update(['ticket_id' => $target->id]);
+
+                // Transfer attachments
+                $source->attachments()->update(['ticket_id' => $target->id]);
+
+                // Transfer subscriptions (avoiding duplicates)
+                $source->subscriptions->each(function ($subscription) use ($target) {
+                    $existing = $target->subscriptions()
+                        ->where('subscriber_type', $subscription->subscriber_type)
+                        ->where('subscriber_id', $subscription->subscriber_id)
+                        ->exists();
+
+                    if (! $existing) {
+                        $subscription->update(['ticket_id' => $target->id]);
+                    } else {
+                        $subscription->delete();
+                    }
+                });
+
+                // Move child tickets to target
+                if ($source->hasChildren()) {
+                    $source->children->each(function ($child) use ($target) {
+                        $child->appendToNode($target)->save();
+                    });
+                }
+
+                // Mark source as merged
+                $source->update([
+                    'merged_to_id' => $target->id,
+                    'merged_at' => now(),
+                    'merge_reason' => $reason,
+                    'status' => TicketStatus::Closed,
+                ]);
+
+                event(new \LucaLongo\LaravelHelpdesk\Events\TicketMerged($source, $target, $reason));
+            }
+        });
+
+        return $target->load(['comments', 'attachments', 'subscriptions']);
+    }
+
+    public function createRelation(Ticket $ticket, Ticket $relatedTicket, TicketRelationType $type, ?string $notes = null): TicketRelation
+    {
+        // Check if relation already exists
+        $exists = TicketRelation::where('ticket_id', $ticket->id)
+            ->where('related_ticket_id', $relatedTicket->id)
+            ->where('relation_type', $type->value)
+            ->exists();
+
+        if ($exists) {
+            throw new \InvalidArgumentException(__('Relation already exists between these tickets'));
+        }
+
+        $relation = TicketRelation::create([
+            'ticket_id' => $ticket->id,
+            'related_ticket_id' => $relatedTicket->id,
+            'relation_type' => $type,
+            'notes' => $notes,
+        ]);
+
+        // Create inverse relation if needed
+        $inverseType = $type->inverseType();
+        if ($type !== $inverseType) {
+            TicketRelation::create([
+                'ticket_id' => $relatedTicket->id,
+                'related_ticket_id' => $ticket->id,
+                'relation_type' => $inverseType,
+                'notes' => $notes,
+            ]);
+        }
+
+        event(new \LucaLongo\LaravelHelpdesk\Events\TicketRelationCreated($ticket, $relatedTicket, $type));
+
+        return $relation;
+    }
+
+    public function removeRelation(Ticket $ticket, Ticket $relatedTicket, TicketRelationType $type): void
+    {
+        // Remove direct relation
+        TicketRelation::where('ticket_id', $ticket->id)
+            ->where('related_ticket_id', $relatedTicket->id)
+            ->where('relation_type', $type->value)
+            ->delete();
+
+        // Remove inverse relation
+        $inverseType = $type->inverseType();
+        TicketRelation::where('ticket_id', $relatedTicket->id)
+            ->where('related_ticket_id', $ticket->id)
+            ->where('relation_type', $inverseType->value)
+            ->delete();
+
+        event(new \LucaLongo\LaravelHelpdesk\Events\TicketRelationRemoved($ticket, $relatedTicket, $type));
+    }
+
+    public function createChildTicket(Ticket $parent, array $attributes, ?Model $openedBy = null): Ticket
+    {
+        $child = $this->open($attributes, $openedBy);
+        $child->appendToNode($parent)->save();
+
+        event(new \LucaLongo\LaravelHelpdesk\Events\ChildTicketCreated($parent, $child));
+
+        return $child;
+    }
+
+    public function moveToParent(Ticket $ticket, ?Ticket $newParent): Ticket
+    {
+        if ($newParent === null) {
+            $ticket->makeRoot()->save();
+        } else {
+            $ticket->appendToNode($newParent)->save();
+        }
+
+        return $ticket->refresh();
     }
 
 }

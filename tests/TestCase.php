@@ -51,6 +51,9 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/create_helpdesk_ticket_ratings_table.php.stub',
             __DIR__.'/../database/migrations/create_helpdesk_automation_rules_table.php.stub',
             __DIR__.'/../database/migrations/create_helpdesk_automation_executions_table.php.stub',
+            __DIR__.'/../database/migrations/add_ticket_relations_columns.php.stub',
+            __DIR__.'/../database/migrations/create_helpdesk_ticket_relations_table.php.stub',
+            __DIR__.'/../database/migrations/create_helpdesk_ticket_time_entries_table.php.stub',
         ] as $migrationPath) {
             $migration = include $migrationPath;
             $migration->up();

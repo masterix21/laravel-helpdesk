@@ -67,7 +67,7 @@ describe('Rating submission', function () {
 
     it('throws exception for invalid rating values', function () {
         $this->service->submitRating($this->ticket, $this->user, 6);
-    })->throws(\InvalidArgumentException::class, 'Rating must be between 1 and 5');
+    })->throws(\InvalidArgumentException::class, 'The rating field must not be greater than 5.');
 
     it('cannot rate ticket if not eligible', function () {
         $otherUser = new \LucaLongo\LaravelHelpdesk\Tests\Fakes\User(['id' => 2]);

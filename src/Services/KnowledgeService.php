@@ -304,7 +304,7 @@ class KnowledgeService
             ->orderByDesc('created_at')
             ->first();
 
-        return $resolutionComment?->content;
+        return $resolutionComment?->body;
     }
 
     protected function generateFAQTitle(Ticket $ticket): string
@@ -344,13 +344,25 @@ class KnowledgeService
         $text = preg_replace('/[^\w\s]/', ' ', $text);
         $words = explode(' ', $text);
 
-        $stopWords = ['the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'could', 'to', 'of', 'in', 'for', 'with', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once'];
+        $stopWords = $this->getStopWords();
 
         $keywords = array_filter($words, function ($word) use ($stopWords) {
             return strlen($word) > 2 && !in_array($word, $stopWords);
         });
 
         return array_values(array_unique($keywords));
+    }
+
+    protected function getStopWords(): array
+    {
+        return [
+            'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are',
+            'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did',
+            'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'to',
+            'of', 'in', 'for', 'with', 'from', 'up', 'about', 'into', 'through',
+            'during', 'before', 'after', 'above', 'below', 'between', 'under',
+            'again', 'further', 'then', 'once'
+        ];
     }
 
     protected function calculateRelevanceScore(KnowledgeArticle $article, Ticket $ticket, int $matchCount): float

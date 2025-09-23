@@ -11,6 +11,7 @@ use LucaLongo\LaravelHelpdesk\Services\ResponseTemplateService;
 use LucaLongo\LaravelHelpdesk\Services\SlaService;
 use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
+use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
 use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -33,7 +34,10 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
             ->hasMigration('create_helpdesk_response_templates_table')
             ->hasMigration('create_helpdesk_ticket_ratings_table')
             ->hasMigration('create_helpdesk_automation_rules_table')
-            ->hasMigration('create_helpdesk_automation_executions_table');
+            ->hasMigration('create_helpdesk_automation_executions_table')
+            ->hasMigration('add_ticket_relations_columns')
+            ->hasMigration('create_helpdesk_ticket_relations_table')
+            ->hasMigration('create_helpdesk_ticket_time_entries_table');
     }
 
     public function registeringPackage(): void
@@ -42,6 +46,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
         $this->app->singleton(SlaService::class);
         $this->app->singleton(CommentService::class);
         $this->app->singleton(SubscriptionService::class);
+        $this->app->singleton(TimeTrackingService::class);
 
         // Register services with proper dependency injection
         $this->app->singleton(TicketService::class, function ($app) {

@@ -32,7 +32,7 @@ class CommentService
 
         event(new TicketCommentAdded($comment));
 
-        return $comment->fresh(['author']);
+        return $comment->load('author');
     }
 
     private function isInternalComment(?Model $author): bool

@@ -84,6 +84,20 @@ return [
         'min_feedback_length' => 10,
     ],
 
+    'time_tracking' => [
+        'enabled' => true,
+        'billable_by_default' => true,
+        'default_hourly_rate' => null,
+        'allow_manual_entries' => true,
+        'allow_overlapping_entries' => false,
+        'auto_stop_on_status_change' => [
+            TicketStatus::Resolved->value,
+            TicketStatus::Closed->value,
+        ],
+        'minimum_duration_minutes' => 1,
+        'round_to_nearest_minutes' => null,
+    ],
+
     'automation' => [
         'enabled' => true,
         'triggers' => [

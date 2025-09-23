@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Events\TicketRated;
@@ -21,8 +22,16 @@ class RatingService
         ?string $feedback = null,
         array $metadata = []
     ): ?TicketRating {
-        if ($rating < 1 || $rating > 5) {
-            throw new \InvalidArgumentException('Rating must be between 1 and 5');
+        $validator = Validator::make([
+            'rating' => $rating,
+            'feedback' => $feedback,
+        ], [
+            'rating' => 'required|integer|min:1|max:5',
+            'feedback' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            throw new \InvalidArgumentException($validator->errors()->first());
         }
 
         if (! $this->canRateTicket($ticket, $user)) {

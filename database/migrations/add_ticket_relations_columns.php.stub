@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Kalnoy\Nestedset\NestedSet;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('helpdesk_tickets', function (Blueprint $table) {
+            // NestedSet columns for hierarchy
+            NestedSet::columns($table);
+
+            // Merge tracking columns
+            $table->foreignId('merged_to_id')->nullable()->after('id')
+                ->constrained('helpdesk_tickets')->nullOnDelete();
+            $table->timestamp('merged_at')->nullable()->after('closed_at');
+            $table->string('merge_reason')->nullable()->after('merged_at');
+
+            $table->index('merged_to_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('helpdesk_tickets', function (Blueprint $table) {
+            NestedSet::dropColumns($table);
+            $table->dropForeign(['merged_to_id']);
+            $table->dropColumn(['merged_to_id', 'merged_at', 'merge_reason']);
+        });
+    }
+};

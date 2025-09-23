@@ -28,6 +28,8 @@ class TicketFactory extends Factory
             'meta' => ['source' => 'factory'],
             'opened_at' => now(),
             'due_at' => now()->addDays(2),
+            '_lft' => 1,
+            '_rgt' => 2,
         ];
     }
 

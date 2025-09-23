@@ -26,12 +26,6 @@ class TicketComment extends Model
         'meta' => AsArrayObject::class,
     ];
 
-    /**
-     * The relationships that should always be loaded.
-     *
-     * @var array
-     */
-    protected $with = ['author'];
 
     public function ticket(): BelongsTo
     {

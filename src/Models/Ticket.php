@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Kalnoy\Nestedset\NodeTrait;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -18,7 +20,7 @@ use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 
 class Ticket extends Model
 {
-    use HasFactory;
+    use HasFactory, NodeTrait;
 
     protected $table = 'helpdesk_tickets';
 
@@ -46,6 +48,14 @@ class Ticket extends Model
         'opened_by_id',
         'assigned_to_type',
         'assigned_to_id',
+        'merged_to_id',
+        'merged_at',
+        'merge_reason',
+        'parent_id',
+    ];
+
+    protected $attributes = [
+        'status' => TicketStatus::Open,
     ];
 
     protected $casts = [
@@ -60,21 +70,15 @@ class Ticket extends Model
         'first_response_due_at' => 'datetime',
         'resolution_due_at' => 'datetime',
         'sla_breached' => 'boolean',
+        'merged_at' => 'datetime',
     ];
 
 
     protected static function booted(): void
     {
         static::creating(static function (self $ticket): void {
-            if ($ticket->ulid === null) {
-                $ticket->ulid = (string) Str::ulid();
-            }
-
-            if ($ticket->opened_at !== null) {
-                return;
-            }
-
-            $ticket->opened_at = now();
+            $ticket->ulid ??= (string) Str::ulid();
+            $ticket->opened_at ??= now();
         });
     }
 
@@ -106,6 +110,11 @@ class Ticket extends Model
     public function rating(): HasOne
     {
         return $this->hasOne(TicketRating::class);
+    }
+
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TicketTimeEntry::class);
     }
 
     public function knowledgeArticles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
@@ -142,6 +151,49 @@ class Ticket extends Model
             'ticket_id',
             'tag_id'
         )->withTimestamps();
+    }
+
+    public function mergedTo(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'merged_to_id');
+    }
+
+    public function mergedTickets(): HasMany
+    {
+        return $this->hasMany(self::class, 'merged_to_id');
+    }
+
+    public function relations(): HasMany
+    {
+        return $this->hasMany(TicketRelation::class, 'ticket_id');
+    }
+
+    public function relatedTickets(): HasMany
+    {
+        return $this->hasMany(TicketRelation::class, 'related_ticket_id');
+    }
+
+    public function getAllRelations(): \Illuminate\Support\Collection
+    {
+        $directRelations = $this->relations;
+        $inverseRelations = $this->relatedTickets;
+
+        return $directRelations->merge($inverseRelations);
+    }
+
+    public function isMerged(): bool
+    {
+        return $this->merged_to_id !== null;
+    }
+
+    public function canBeMerged(): bool
+    {
+        return ! $this->isMerged() && ! $this->hasDescendants();
+    }
+
+    public function isChild(): bool
+    {
+        return $this->parent_id !== null;
     }
 
     public function transitionTo(TicketStatus $next): bool
@@ -190,7 +242,7 @@ class Ticket extends Model
 
     public function isAssignedTo(Model $assignee): bool
     {
-        if ($this->assigned_to_type === null || $this->assigned_to_id === null) {
+        if (!$this->assigned_to_type || !$this->assigned_to_id) {
             return false;
         }
 
@@ -200,11 +252,7 @@ class Ticket extends Model
 
     public function shouldQueueSlaAlert(): bool
     {
-        if ($this->due_at === null) {
-            return false;
-        }
-
-        if ($this->status->isTerminal()) {
+        if (!$this->due_at || $this->status->isTerminal()) {
             return false;
         }
 
@@ -284,14 +332,6 @@ class Ticket extends Model
     }
 
     #[Scope]
-    public function withAnyCategories(Builder $query, array|int $categoryIds): void
-    {
-        $query->whereHas('categories', function (Builder $q) use ($categoryIds) {
-            $q->whereIn('category_id', (array) $categoryIds);
-        });
-    }
-
-    #[Scope]
     public function withAllCategories(Builder $query, array $categoryIds): void
     {
         foreach ($categoryIds as $categoryId) {
@@ -303,14 +343,6 @@ class Ticket extends Model
 
     #[Scope]
     public function withTags(Builder $query, array|int $tagIds): void
-    {
-        $query->whereHas('tags', function (Builder $q) use ($tagIds) {
-            $q->whereIn('tag_id', (array) $tagIds);
-        });
-    }
-
-    #[Scope]
-    public function withAnyTags(Builder $query, array|int $tagIds): void
     {
         $query->whereHas('tags', function (Builder $q) use ($tagIds) {
             $q->whereIn('tag_id', (array) $tagIds);
@@ -333,7 +365,6 @@ class Ticket extends Model
         $categoryId = $category instanceof Category ? $category->id : $category;
 
         if ($category instanceof Category) {
-            // Get all descendant IDs efficiently
             $descendantIds = $category->getAllDescendants()->pluck('id')->toArray();
             $categoryIds = array_merge([$categoryId], $descendantIds);
 
@@ -370,7 +401,6 @@ class Ticket extends Model
         $query->with([
             'opener',
             'assignee',
-            'comments',
             'comments.author',
             'attachments',
             'subscriptions',
@@ -393,11 +423,7 @@ class Ticket extends Model
 
     public function isFirstResponseOverdue(): bool
     {
-        if ($this->first_response_at !== null) {
-            return false;
-        }
-
-        if ($this->first_response_due_at === null) {
+        if ($this->first_response_at || !$this->first_response_due_at) {
             return false;
         }
 
@@ -406,11 +432,7 @@ class Ticket extends Model
 
     public function isResolutionOverdue(): bool
     {
-        if ($this->status->isTerminal()) {
-            return false;
-        }
-
-        if ($this->resolution_due_at === null) {
+        if ($this->status->isTerminal() || !$this->resolution_due_at) {
             return false;
         }
 
@@ -422,22 +444,16 @@ class Ticket extends Model
         $dueField = $type === 'first_response' ? 'first_response_due_at' : 'resolution_due_at';
         $responseField = $type === 'first_response' ? 'first_response_at' : 'closed_at';
 
-        if ($this->$dueField === null) {
+        if (!$this->$dueField) {
             return null;
         }
 
         $totalMinutes = $this->opened_at->diffInMinutes($this->$dueField);
-
-        if ($this->$responseField !== null) {
-            $usedMinutes = $this->opened_at->diffInMinutes($this->$responseField);
-        } else {
-            $usedMinutes = $this->opened_at->diffInMinutes(now());
-        }
-
         if ($totalMinutes === 0) {
             return 0;
         }
 
+        $usedMinutes = $this->opened_at->diffInMinutes($this->$responseField ?? now());
         $percentage = (1 - ($usedMinutes / $totalMinutes)) * 100;
 
         return max(0, min(100, $percentage));
