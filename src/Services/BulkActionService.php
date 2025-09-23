@@ -31,7 +31,7 @@ class BulkActionService
             throw new \InvalidArgumentException("Action {$action} is not allowed");
         }
 
-        $method = 'handle' . str_replace('_', '', ucwords($action, '_'));
+        $method = 'handle'.str_replace('_', '', ucwords($action, '_'));
 
         if (! method_exists($this, $method)) {
             throw new \InvalidArgumentException("Handler for action {$action} not found");

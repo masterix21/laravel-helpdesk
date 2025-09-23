@@ -39,12 +39,12 @@ class TicketService
         // Set ulid explicitly if provided (bypassing fillable)
         if (isset($attributes['ulid'])) {
             $ticket->ulid = $attributes['ulid'];
-        } elseif (!$ticket->ulid) {
+        } elseif (! $ticket->ulid) {
             $ticket->ulid = (string) Str::ulid();
         }
 
         // Set opened_at if not provided
-        if (!isset($attributes['opened_at'])) {
+        if (! isset($attributes['opened_at'])) {
             $ticket->opened_at = now();
         }
 
@@ -147,7 +147,6 @@ class TicketService
         return $ticket->fresh();
     }
 
-
     private function resolvePriority(TicketPriority|string|null $priority, TicketType $type): TicketPriority
     {
         if ($priority instanceof TicketPriority) {
@@ -183,7 +182,6 @@ class TicketService
         return now()->addMinutes($minutes);
     }
 
-
     private function associateActor(Ticket $ticket, Model $actor, string $relation): void
     {
         $ticket->{$relation.'_type'} = $actor->getMorphClass();
@@ -198,5 +196,4 @@ class TicketService
 
         return $ticket->assignTo($assignee);
     }
-
 }

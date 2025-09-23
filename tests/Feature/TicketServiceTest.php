@@ -52,7 +52,7 @@ it('transitions status and fires event only on valid changes', function (): void
     Event::assertDispatched(TicketStatusChanged::class, 1);
     expect($ticket->fresh()->status)->toBe(TicketStatus::Resolved);
 
-    expect(fn() => $service->transition($ticket->fresh(), TicketStatus::Resolved))
+    expect(fn () => $service->transition($ticket->fresh(), TicketStatus::Resolved))
         ->toThrow(\LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException::class);
 
     Event::assertDispatchedTimes(TicketStatusChanged::class, 1);

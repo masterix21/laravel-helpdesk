@@ -66,7 +66,7 @@ class ProcessFollowupTask implements ShouldQueue
 
         if ($daysSinceActivity >= 3) {
             $ticket->comments()->create([
-                'body' => $this->parameters['message'] ?? 'This ticket has been inactive for ' . $daysSinceActivity . ' days. Please provide an update or it may be closed.',
+                'body' => $this->parameters['message'] ?? 'This ticket has been inactive for '.$daysSinceActivity.' days. Please provide an update or it may be closed.',
                 'is_internal' => false,
                 'author_type' => null,
                 'author_id' => null,
@@ -127,7 +127,7 @@ class ProcessFollowupTask implements ShouldQueue
             $ticket->transitionTo(\LucaLongo\LaravelHelpdesk\Enums\TicketStatus::Closed);
 
             $ticket->comments()->create([
-                'body' => 'Ticket automatically closed after ' . $daysSinceActivity . ' days of inactivity.',
+                'body' => 'Ticket automatically closed after '.$daysSinceActivity.' days of inactivity.',
                 'is_internal' => true,
                 'author_type' => null,
                 'author_id' => null,

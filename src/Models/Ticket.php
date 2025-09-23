@@ -62,7 +62,6 @@ class Ticket extends Model
         'sla_breached' => 'boolean',
     ];
 
-
     protected static function booted(): void
     {
         static::creating(static function (self $ticket): void {

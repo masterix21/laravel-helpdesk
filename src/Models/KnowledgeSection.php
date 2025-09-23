@@ -101,7 +101,7 @@ class KnowledgeSection extends Model
 
     public function hasVisibleContent(): bool
     {
-        if (!$this->is_visible) {
+        if (! $this->is_visible) {
             return false;
         }
 

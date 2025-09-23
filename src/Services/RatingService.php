@@ -2,14 +2,13 @@
 
 namespace LucaLongo\LaravelHelpdesk\Services;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
-use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Events\TicketRated;
 use LucaLongo\LaravelHelpdesk\Events\TicketRatingUpdated;
+use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketRating;
 
 class RatingService
@@ -99,7 +98,7 @@ class RatingService
             ->first();
     }
 
-    public function getAverageRating(\DateTimeInterface $from = null, \DateTimeInterface $to = null): float
+    public function getAverageRating(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): float
     {
         $query = TicketRating::query();
 
@@ -110,7 +109,7 @@ class RatingService
         return round($query->avg('rating') ?? 0, 2);
     }
 
-    public function getCSAT(\DateTimeInterface $from = null, \DateTimeInterface $to = null): float
+    public function getCSAT(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): float
     {
         $query = TicketRating::query();
 
@@ -129,7 +128,7 @@ class RatingService
         return round(($satisfied / $total) * 100, 2);
     }
 
-    public function getNPS(\DateTimeInterface $from = null, \DateTimeInterface $to = null): float
+    public function getNPS(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): float
     {
         $query = TicketRating::query();
 
@@ -151,7 +150,7 @@ class RatingService
         return round($nps, 2);
     }
 
-    public function getRatingDistribution(\DateTimeInterface $from = null, \DateTimeInterface $to = null): Collection
+    public function getRatingDistribution(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): Collection
     {
         $query = TicketRating::query();
 
@@ -174,7 +173,7 @@ class RatingService
         return $result;
     }
 
-    public function getResponseRate(\DateTimeInterface $from = null, \DateTimeInterface $to = null): float
+    public function getResponseRate(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): float
     {
         $ticketQuery = Ticket::whereIn('status', config('helpdesk.rating.allowed_statuses', [TicketStatus::Resolved, TicketStatus::Closed]));
 
@@ -193,7 +192,7 @@ class RatingService
         return round(($ratedTickets / $totalEligibleTickets) * 100, 2);
     }
 
-    public function getAverageResponseTime(\DateTimeInterface $from = null, \DateTimeInterface $to = null): ?float
+    public function getAverageResponseTime(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): ?float
     {
         $query = TicketRating::whereNotNull('response_time_hours');
 
@@ -206,7 +205,7 @@ class RatingService
         return $average ? round($average, 2) : null;
     }
 
-    public function getFeedbackSentiment(\DateTimeInterface $from = null, \DateTimeInterface $to = null): array
+    public function getFeedbackSentiment(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): array
     {
         $query = TicketRating::query();
 
@@ -252,7 +251,7 @@ class RatingService
         return $query->limit($limit)->get();
     }
 
-    public function getMetrics(\DateTimeInterface $from = null, \DateTimeInterface $to = null): array
+    public function getMetrics(?\DateTimeInterface $from = null, ?\DateTimeInterface $to = null): array
     {
         return [
             'average_rating' => $this->getAverageRating($from, $to),
