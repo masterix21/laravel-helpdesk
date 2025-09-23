@@ -12,6 +12,8 @@ use LucaLongo\LaravelHelpdesk\Events\TicketSubscriptionCreated;
 use LucaLongo\LaravelHelpdesk\Events\TicketSubscriptionTriggered;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketSubscription;
+use LucaLongo\LaravelHelpdesk\Services\CommentService;
+use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Tests\Fakes\Agent;
 
@@ -50,7 +52,8 @@ it('transitions status and fires event only on valid changes', function (): void
     Event::assertDispatched(TicketStatusChanged::class, 1);
     expect($ticket->fresh()->status)->toBe(TicketStatus::Resolved);
 
-    $service->transition($ticket->fresh(), TicketStatus::Resolved);
+    expect(fn() => $service->transition($ticket->fresh(), TicketStatus::Resolved))
+        ->toThrow(\LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException::class);
 
     Event::assertDispatchedTimes(TicketStatusChanged::class, 1);
 });
@@ -80,9 +83,9 @@ it('stores comments with metadata', function (): void {
     ]);
 
     $ticket = Ticket::factory()->create();
-    $service = app(TicketService::class);
+    $service = app(CommentService::class);
 
-    $comment = $service->comment($ticket, 'Risposta veloce', null, ['visibility' => 'internal']);
+    $comment = $service->addComment($ticket, 'Risposta veloce', null, ['visibility' => 'internal']);
 
     expect($comment->meta)->toBeInstanceOf(ArrayObject::class)
         ->and($comment->meta->getArrayCopy())
@@ -100,16 +103,17 @@ it('subscribes to all status updates and triggers notifications', function (): v
     $ticket = Ticket::factory()->create();
     $subscriber = Agent::query()->create(['name' => 'Laura']);
 
-    $service = app(TicketService::class);
+    $subscriptionService = app(SubscriptionService::class);
 
-    $subscription = $service->subscribe($ticket, $subscriber);
+    $subscription = $subscriptionService->subscribe($ticket, $subscriber);
 
     expect($subscription)->toBeInstanceOf(TicketSubscription::class)
         ->and($subscription->notify_on)->toBeNull();
 
     Event::assertDispatched(TicketSubscriptionCreated::class);
 
-    $service->transition($ticket, TicketStatus::InProgress);
+    $ticketService = app(TicketService::class);
+    $ticketService->transition($ticket, TicketStatus::InProgress);
 
     Event::assertDispatched(TicketSubscriptionTriggered::class, function (TicketSubscriptionTriggered $event) use ($subscriber, $ticket): bool {
         return $event->ticket->is($ticket->fresh())
@@ -125,15 +129,16 @@ it('subscribes to a specific status and skips unmatched updates', function (): v
 
     $ticket = Ticket::factory()->create();
     $subscriber = Agent::query()->create(['name' => 'Chiara']);
-    $service = app(TicketService::class);
+    $ticketService = app(TicketService::class);
+    $subscriptionService = app(SubscriptionService::class);
 
-    $service->subscribe($ticket, $subscriber, TicketStatus::Resolved);
+    $subscriptionService->subscribe($ticket, $subscriber, TicketStatus::Resolved);
 
-    $service->transition($ticket, TicketStatus::InProgress);
+    $ticketService->transition($ticket, TicketStatus::InProgress);
 
     Event::assertNotDispatched(TicketSubscriptionTriggered::class);
 
-    $service->transition($ticket->fresh(), TicketStatus::Resolved);
+    $ticketService->transition($ticket->fresh(), TicketStatus::Resolved);
 
     Event::assertDispatched(TicketSubscriptionTriggered::class, function (TicketSubscriptionTriggered $event): bool {
         return $event->status === TicketStatus::Resolved
@@ -144,7 +149,7 @@ it('subscribes to a specific status and skips unmatched updates', function (): v
 it('prevents duplicate subscriptions and allows unsubscribe', function (): void {
     $ticket = Ticket::factory()->create();
     $subscriber = Agent::query()->create(['name' => 'Giulia']);
-    $service = app(TicketService::class);
+    $service = app(SubscriptionService::class);
 
     $first = $service->subscribe($ticket, $subscriber);
     $second = $service->subscribe($ticket, $subscriber);

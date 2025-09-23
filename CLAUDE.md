@@ -96,3 +96,4 @@ The package config (`config/helpdesk.php`) defines:
 - Pest for testing with descriptive test names
 - Typed properties over docblocks
 - Early returns for better readability
+- Use the early returns.

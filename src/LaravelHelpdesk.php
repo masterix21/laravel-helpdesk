@@ -6,11 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketComment;
+use LucaLongo\LaravelHelpdesk\Services\CommentService;
+use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 
 class LaravelHelpdesk
 {
-    public function __construct(protected readonly TicketService $tickets) {}
+    public function __construct(
+        protected readonly TicketService $tickets,
+        protected readonly CommentService $comments,
+        protected readonly SubscriptionService $subscriptions
+    ) {}
 
     public function openTicket(array $attributes, ?Model $openedBy = null): Ticket
     {
@@ -34,6 +40,6 @@ class LaravelHelpdesk
 
     public function commentOnTicket(Ticket $ticket, string $body, ?Model $author = null, array $meta = []): TicketComment
     {
-        return $this->tickets->comment($ticket, $body, $author, $meta);
+        return $this->comments->addComment($ticket, $body, $author, $meta);
     }
 }

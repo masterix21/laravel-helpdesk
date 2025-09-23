@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use LucaLongo\LaravelHelpdesk\Enums\KnowledgeSuggestionMatchType;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_knowledge_suggestions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ticket_id')->constrained('helpdesk_tickets')->cascadeOnDelete();
+            $table->foreignId('article_id')->constrained('helpdesk_knowledge_articles')->cascadeOnDelete();
+            $table->decimal('relevance_score', 5, 2);
+            $table->string('match_type'); // 'keyword', 'content', 'category', 'similar_tickets'
+            $table->json('matched_terms')->nullable();
+            $table->boolean('was_viewed')->default(false);
+            $table->boolean('was_helpful')->nullable();
+            $table->timestamp('viewed_at')->nullable();
+            $table->timestamps();
+
+            $table->index(['ticket_id', 'relevance_score']);
+            $table->index('was_viewed');
+            $table->index('was_helpful');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_knowledge_suggestions');
+    }
+};

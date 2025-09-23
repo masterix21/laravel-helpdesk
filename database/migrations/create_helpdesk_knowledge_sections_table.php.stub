@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_knowledge_sections', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->text('description')->nullable();
+            $table->string('icon')->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->integer('position')->default(0);
+            $table->boolean('is_visible')->default(true);
+            $table->json('meta')->nullable();
+            $table->timestamps();
+
+            $table->foreign('parent_id')
+                ->references('id')
+                ->on('helpdesk_knowledge_sections')
+                ->onDelete('cascade');
+
+            $table->index(['parent_id', 'position']);
+            $table->index('slug');
+            $table->index('is_visible');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_knowledge_sections');
+    }
+};

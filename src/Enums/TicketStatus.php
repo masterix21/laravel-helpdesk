@@ -60,7 +60,7 @@ enum TicketStatus: string
 
     public function canTransitionTo(self $next): bool
     {
-        $allowed = self::TRANSITIONS[$this->value] ?? [];
+        $allowed = self::TRANSITIONS[$this->value];
 
         return in_array($next->value, $allowed, true);
     }

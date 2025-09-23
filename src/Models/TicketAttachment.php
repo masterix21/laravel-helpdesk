@@ -13,7 +13,15 @@ class TicketAttachment extends Model
 
     protected $table = 'helpdesk_ticket_attachments';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'ticket_id',
+        'filename',
+        'disk',
+        'path',
+        'mime_type',
+        'size',
+        'meta',
+    ];
 
     protected $casts = [
         'meta' => AsArrayObject::class,

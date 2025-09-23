@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_knowledge_article_sections', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('article_id')->constrained('helpdesk_knowledge_articles')->cascadeOnDelete();
+            $table->foreignId('section_id')->constrained('helpdesk_knowledge_sections')->cascadeOnDelete();
+            $table->integer('position')->default(0);
+            $table->timestamps();
+
+            $table->unique(['article_id', 'section_id']);
+            $table->index(['section_id', 'position']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_knowledge_article_sections');
+    }
+};

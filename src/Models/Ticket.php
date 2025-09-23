@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
@@ -21,7 +22,31 @@ class Ticket extends Model
 
     protected $table = 'helpdesk_tickets';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'type',
+        'subject',
+        'description',
+        'status',
+        'priority',
+        'ticket_number',
+        'customer_name',
+        'customer_email',
+        'meta',
+        'opened_at',
+        'closed_at',
+        'due_at',
+        'first_response_at',
+        'first_response_due_at',
+        'resolution_due_at',
+        'sla_breached',
+        'sla_breach_type',
+        'response_time_minutes',
+        'resolution_time_minutes',
+        'opened_by_type',
+        'opened_by_id',
+        'assigned_to_type',
+        'assigned_to_id',
+    ];
 
     protected $casts = [
         'type' => TicketType::class,
@@ -37,16 +62,6 @@ class Ticket extends Model
         'sla_breached' => 'boolean',
     ];
 
-    protected $dates = [
-        'created_at',
-        'updated_at',
-        'opened_at',
-        'closed_at',
-        'due_at',
-        'first_response_at',
-        'first_response_due_at',
-        'resolution_due_at',
-    ];
 
     protected static function booted(): void
     {
@@ -86,6 +101,27 @@ class Ticket extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(TicketSubscription::class);
+    }
+
+    public function rating(): HasOne
+    {
+        return $this->hasOne(TicketRating::class);
+    }
+
+    public function knowledgeArticles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            KnowledgeArticle::class,
+            'helpdesk_knowledge_article_tickets',
+            'ticket_id',
+            'article_id'
+        )->withPivot(['was_helpful', 'resolved_issue', 'linked_by_type', 'linked_by_id'])
+            ->withTimestamps();
+    }
+
+    public function knowledgeSuggestions(): HasMany
+    {
+        return $this->hasMany(KnowledgeSuggestion::class);
     }
 
     public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
@@ -326,6 +362,33 @@ class Ticket extends Model
                         ->orWhere('resolution_due_at', '>=', now());
                 });
             });
+    }
+
+    #[Scope]
+    public function withAllRelations(Builder $query): void
+    {
+        $query->with([
+            'opener',
+            'assignee',
+            'comments',
+            'comments.author',
+            'attachments',
+            'subscriptions',
+            'categories',
+            'tags',
+            'rating',
+        ]);
+    }
+
+    #[Scope]
+    public function withEssentialRelations(Builder $query): void
+    {
+        $query->with([
+            'opener',
+            'assignee',
+            'categories',
+            'tags',
+        ]);
     }
 
     public function isFirstResponseOverdue(): bool

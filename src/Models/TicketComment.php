@@ -14,11 +14,24 @@ class TicketComment extends Model
 
     protected $table = 'helpdesk_ticket_comments';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'ticket_id',
+        'body',
+        'meta',
+        'author_type',
+        'author_id',
+    ];
 
     protected $casts = [
         'meta' => AsArrayObject::class,
     ];
+
+    /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    protected $with = ['author'];
 
     public function ticket(): BelongsTo
     {

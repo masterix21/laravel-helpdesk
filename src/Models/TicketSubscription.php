@@ -14,11 +14,23 @@ class TicketSubscription extends Model
 
     protected $table = 'helpdesk_ticket_subscriptions';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'ticket_id',
+        'subscriber_type',
+        'subscriber_id',
+        'notify_on',
+    ];
 
     protected $casts = [
         'notify_on' => TicketStatus::class,
     ];
+
+    /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    protected $with = ['subscriber'];
 
     public function ticket(): BelongsTo
     {

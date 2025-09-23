@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use LucaLongo\LaravelHelpdesk\Enums\KnowledgeArticleRelationType;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_knowledge_article_relations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('article_id')->constrained('helpdesk_knowledge_articles')->cascadeOnDelete();
+            $table->foreignId('related_article_id')->constrained('helpdesk_knowledge_articles')->cascadeOnDelete();
+            $table->string('relation_type')->default(KnowledgeArticleRelationType::Related->value);
+            $table->integer('position')->default(0);
+            $table->timestamps();
+
+            $table->unique(['article_id', 'related_article_id']);
+            $table->index(['article_id', 'position']);
+            $table->index('relation_type');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_knowledge_article_relations');
+    }
+};

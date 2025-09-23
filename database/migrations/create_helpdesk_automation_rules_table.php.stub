@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_automation_rules', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('trigger')->index();
+            $table->json('conditions');
+            $table->json('actions');
+            $table->integer('priority')->default(0)->index();
+            $table->boolean('is_active')->default(true)->index();
+            $table->boolean('stop_processing')->default(false);
+            $table->timestamp('last_executed_at')->nullable();
+            $table->timestamps();
+
+            $table->index(['is_active', 'trigger', 'priority']);
+        });
+    }
+};

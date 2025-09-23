@@ -188,18 +188,19 @@ class CategoryService
 
     private function duplicateChildren(Category $source, Category $target): void
     {
-        // Load children with their descendants
-        $children = $source->children()->get();
+        // Eager load children with their nested children to avoid N+1
+        $children = $source->children()->with('children')->get();
 
         foreach ($children as $child) {
             $childData = $child->toArray();
-            unset($childData['id'], $childData['created_at'], $childData['updated_at'], $childData['slug']);
+            unset($childData['id'], $childData['created_at'], $childData['updated_at'], $childData['slug'], $childData['children']);
             $childData['parent_id'] = $target->id;
 
             // Create the child and recursively duplicate its children
             $newChild = $this->create($childData);
 
-            if ($child->children()->exists()) {
+            // Use the already loaded relationship instead of querying again
+            if ($child->children->isNotEmpty()) {
                 $this->duplicateChildren($child, $newChild);
             }
         }

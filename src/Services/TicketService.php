@@ -2,7 +2,6 @@
 
 namespace LucaLongo\LaravelHelpdesk\Services;
 
-use ArrayAccess;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -10,20 +9,17 @@ use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Events\TicketAssigned;
-use LucaLongo\LaravelHelpdesk\Events\TicketCommentAdded;
 use LucaLongo\LaravelHelpdesk\Events\TicketCreated;
 use LucaLongo\LaravelHelpdesk\Events\TicketStatusChanged;
-use LucaLongo\LaravelHelpdesk\Events\TicketSubscriptionCreated;
-use LucaLongo\LaravelHelpdesk\Events\TicketSubscriptionTriggered;
+use LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
-use LucaLongo\LaravelHelpdesk\Models\TicketComment;
-use LucaLongo\LaravelHelpdesk\Models\TicketSubscription;
 use LucaLongo\LaravelHelpdesk\Support\HelpdeskConfig;
 
 class TicketService
 {
     public function __construct(
-        protected SlaService $slaService = new SlaService
+        protected SlaService $slaService,
+        protected SubscriptionService $subscriptionService
     ) {}
 
     public function open(array $attributes, ?Model $openedBy = null): Ticket
@@ -31,15 +27,26 @@ class TicketService
         $type = HelpdeskConfig::typeFor($attributes['type'] ?? null);
         $priority = $this->resolvePriority($attributes['priority'] ?? null, $type);
 
-        $ticket = Ticket::query()->make([
-            'ulid' => $attributes['ulid'] ?? (string) Str::ulid(),
+        $ticket = new Ticket([
             'type' => $type,
             'subject' => $attributes['subject'],
             'description' => $attributes['description'] ?? null,
             'priority' => $priority,
             'due_at' => $this->resolveDueDate($attributes['due_at'] ?? null, $type),
-            'meta' => $this->resolveMeta($attributes['meta'] ?? []),
+            'meta' => $attributes['meta'] ?? [],
         ]);
+
+        // Set ulid explicitly if provided (bypassing fillable)
+        if (isset($attributes['ulid'])) {
+            $ticket->ulid = $attributes['ulid'];
+        } elseif (!$ticket->ulid) {
+            $ticket->ulid = (string) Str::ulid();
+        }
+
+        // Set opened_at if not provided
+        if (!isset($attributes['opened_at'])) {
+            $ticket->opened_at = now();
+        }
 
         if ($openedBy !== null) {
             $this->associateActor($ticket, $openedBy, 'opened_by');
@@ -52,7 +59,7 @@ class TicketService
 
         event(new TicketCreated($ticket));
 
-        return $ticket->fresh();
+        return $ticket->fresh(['opener', 'assignee']);
     }
 
     public function update(Ticket $ticket, array $attributes): Ticket
@@ -93,7 +100,8 @@ class TicketService
         }
 
         if (array_key_exists('meta', $attributes)) {
-            $ticket->meta = $this->mergeMeta($ticket->meta?->getArrayCopy() ?? [], $attributes['meta']);
+            $current = $ticket->meta?->getArrayCopy() ?? [];
+            $ticket->meta = array_replace_recursive($current, $attributes['meta']);
         }
 
         if ($changes === []) {
@@ -111,17 +119,17 @@ class TicketService
         $previous = $ticket->status;
 
         if ($previous->canTransitionTo($next) === false) {
-            return $ticket;
+            throw InvalidTransitionException::make($previous, $next);
         }
 
         if ($ticket->transitionTo($next) === false) {
-            return $ticket;
+            throw InvalidTransitionException::make($previous, $next);
         }
 
         $freshTicket = $ticket->fresh();
 
         event(new TicketStatusChanged($freshTicket, $previous, $next));
-        $this->notifySubscribers($freshTicket, $next);
+        $this->subscriptionService->notifySubscribers($freshTicket, $next);
 
         return $freshTicket;
     }
@@ -139,73 +147,6 @@ class TicketService
         return $ticket->fresh();
     }
 
-    public function comment(Ticket $ticket, string $body, ?Model $author = null, array $meta = []): TicketComment
-    {
-        $comment = $ticket->comments()->make([
-            'body' => $body,
-            'meta' => $this->resolveMeta($meta),
-        ]);
-
-        if ($author !== null) {
-            $comment->author()->associate($author);
-        }
-
-        $comment->save();
-
-        // Mark first response for SLA if this is the first comment by support
-        if ($ticket->first_response_at === null && $this->isInternalComment($author)) {
-            $ticket->markFirstResponse();
-        }
-
-        event(new TicketCommentAdded($comment));
-
-        return $comment->fresh();
-    }
-
-    private function isInternalComment(?Model $author): bool
-    {
-        // Override this method in your application to determine if the comment
-        // is from internal support staff (vs customer)
-        return $author !== null;
-    }
-
-    public function subscribe(Ticket $ticket, Model $subscriber, TicketStatus|string|null $status = null): TicketSubscription
-    {
-        $statusEnum = $this->resolveStatus($status);
-        $attributes = $this->subscriptionAttributes($ticket, $subscriber, $statusEnum);
-
-        /** @var TicketSubscription|null $existing */
-        $existing = $ticket->subscriptions()
-            ->where($attributes)
-            ->first();
-
-        if ($existing !== null) {
-            return $existing;
-        }
-
-        $subscription = $ticket->subscriptions()->create($attributes);
-
-        event(new TicketSubscriptionCreated($subscription));
-
-        return $subscription;
-    }
-
-    public function unsubscribe(Ticket $ticket, Model $subscriber, TicketStatus|string|null $status = null): bool
-    {
-        $statusEnum = $this->resolveStatus($status);
-        $attributes = $this->subscriptionAttributes($ticket, $subscriber, $statusEnum);
-
-        /** @var TicketSubscription|null $subscription */
-        $subscription = $ticket->subscriptions()
-            ->where($attributes)
-            ->first();
-
-        if ($subscription === null) {
-            return false;
-        }
-
-        return (bool) $subscription->delete();
-    }
 
     private function resolvePriority(TicketPriority|string|null $priority, TicketType $type): TicketPriority
     {
@@ -242,37 +183,6 @@ class TicketService
         return now()->addMinutes($minutes);
     }
 
-    private function resolveMeta(mixed $meta): array
-    {
-        if (is_array($meta)) {
-            return $meta;
-        }
-
-        if ($meta instanceof \ArrayObject) {
-            return $meta->getArrayCopy();
-        }
-
-        if ($meta instanceof ArrayAccess && method_exists($meta, 'toArray')) {
-            return (array) $meta->toArray();
-        }
-
-        if (is_iterable($meta)) {
-            return iterator_to_array($meta);
-        }
-
-        return [];
-    }
-
-    private function mergeMeta(array $current, mixed $incoming): array
-    {
-        $incomingArray = $this->resolveMeta($incoming);
-
-        if ($incomingArray === []) {
-            return $current;
-        }
-
-        return array_replace_recursive($current, $incomingArray);
-    }
 
     private function associateActor(Ticket $ticket, Model $actor, string $relation): void
     {
@@ -289,42 +199,4 @@ class TicketService
         return $ticket->assignTo($assignee);
     }
 
-    private function resolveStatus(TicketStatus|string|null $status): ?TicketStatus
-    {
-        if ($status instanceof TicketStatus) {
-            return $status;
-        }
-
-        if (is_string($status)) {
-            return TicketStatus::tryFrom($status);
-        }
-
-        return null;
-    }
-
-    private function subscriptionAttributes(Ticket $ticket, Model $subscriber, ?TicketStatus $status): array
-    {
-        return [
-            'ticket_id' => $ticket->getKey(),
-            'subscriber_type' => $subscriber->getMorphClass(),
-            'subscriber_id' => $subscriber->getKey(),
-            'notify_on' => $status?->value,
-        ];
-    }
-
-    private function notifySubscribers(Ticket $ticket, TicketStatus $status): void
-    {
-        $subscriptions = $ticket->subscriptions()
-            ->where(function ($query) use ($status): void {
-                $query->whereNull('notify_on')
-                    ->orWhere('notify_on', $status->value);
-            })
-            ->get();
-
-        if ($subscriptions->isEmpty()) {
-            return;
-        }
-
-        event(new TicketSubscriptionTriggered($ticket, $status, $subscriptions));
-    }
 }

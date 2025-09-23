@@ -37,6 +37,12 @@ return new class extends Migration
             $table->nullableMorphs('assigned_to');
             $table->timestamps();
 
+            // Performance indexes for common queries
+            $table->index(['status', 'priority']);
+            $table->index(['type', 'status']);
+            $table->index('ticket_number');
+
+            // SLA indexes
             $table->index(['first_response_due_at', 'status']);
             $table->index(['resolution_due_at', 'status']);
             $table->index('sla_breached');
