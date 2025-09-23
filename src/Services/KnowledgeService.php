@@ -4,7 +4,6 @@ namespace LucaLongo\LaravelHelpdesk\Services;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LucaLongo\LaravelHelpdesk\Enums\KnowledgeArticleStatus;
 use LucaLongo\LaravelHelpdesk\Enums\KnowledgeSuggestionMatchType;
@@ -20,33 +19,43 @@ class KnowledgeService
 {
     public function suggestArticlesForTicket(Ticket $ticket, int $limit = 5): Collection
     {
-        $suggestions = collect();
+        if ($limit <= 0) {
+            $ticket->knowledgeSuggestions()->delete();
 
-        // Clear existing suggestions
+            event(new KnowledgeSuggestionGenerated($ticket, 0));
+
+            return $this->newSuggestionCollection();
+        }
+
+        $ticket->loadMissing(['categories', 'tags']);
+
         $ticket->knowledgeSuggestions()->delete();
 
-        // 1. Search by keywords in title and description
+        $suggestions = collect();
+
         $keywordMatches = $this->findArticlesByKeywords($ticket, $limit);
         $suggestions = $suggestions->merge($keywordMatches);
 
-        // 2. Search by category matches
         $suggestions = $suggestions->merge(
             $ticket->categories->isNotEmpty()
                 ? $this->findArticlesByCategories($ticket, $limit)
                 : collect()
         );
 
-        // 3. Search by similar resolved tickets
         $suggestions = $suggestions->merge($this->findArticlesBySimilarTickets($ticket, $limit));
 
-        // 4. Search by tags if present
         $suggestions = $suggestions->merge(
             $ticket->tags->isNotEmpty()
                 ? $this->findArticlesByTags($ticket, $limit)
                 : collect()
         );
 
-        // Store suggestions in database
+        if ($suggestions->isEmpty()) {
+            event(new KnowledgeSuggestionGenerated($ticket, 0));
+
+            return $this->newSuggestionCollection();
+        }
+
         $suggestions->each(function ($suggestion) use ($ticket) {
             KnowledgeSuggestion::create([
                 'ticket_id' => $ticket->id,
@@ -59,17 +68,19 @@ class KnowledgeService
 
         event(new KnowledgeSuggestionGenerated($ticket, $suggestions->count()));
 
-        // Return top suggestions sorted by weighted score
-        return $ticket->knowledgeSuggestions()
+        $storedSuggestions = $ticket->knowledgeSuggestions()
             ->with('article')
             ->get()
-            ->sortByDesc(fn($s) => $s->getWeightedScore())
-            ->take($limit);
+            ->sortByDesc(fn ($suggestion) => $suggestion->getWeightedScore())
+            ->take($limit)
+            ->values();
+
+        return $this->newSuggestionCollection($storedSuggestions->all());
     }
 
     protected function findArticlesByKeywords(Ticket $ticket, int $limit): \Illuminate\Support\Collection
     {
-        $terms = $this->extractKeywords($ticket->subject . ' ' . $ticket->description);
+        $terms = $this->extractKeywords($ticket->subject.' '.$ticket->description);
 
         if (empty($terms)) {
             return collect();
@@ -89,7 +100,7 @@ class KnowledgeService
 
         return $articles->map(function ($article) use ($terms, $ticket) {
             $matchedTerms = array_filter($terms, function ($term) use ($article) {
-                return str_contains(strtolower($article->title . $article->content), strtolower($term));
+                return str_contains(strtolower($article->title.$article->content), strtolower($term));
             });
 
             return [
@@ -136,11 +147,11 @@ class KnowledgeService
             ->whereHas('rating', function ($query) {
                 $query->where('rating', '>=', 4);
             })
-            ->when(!empty($keywords), function ($query) use ($keywords) {
+            ->when(! empty($keywords), function ($query) use ($keywords) {
                 $query->where(function ($q) use ($keywords) {
                     foreach ($keywords as $keyword) {
                         $q->orWhere('subject', 'LIKE', "%{$keyword}%")
-                          ->orWhere('description', 'LIKE', "%{$keyword}%");
+                            ->orWhere('description', 'LIKE', "%{$keyword}%");
                     }
                 });
             })
@@ -214,10 +225,13 @@ class KnowledgeService
             ->with(['comments', 'categories', 'tags'])
             ->get();
 
-        // Group tickets by similarity
+        if ($tickets->isEmpty()) {
+            return (new KnowledgeArticle)->newCollection();
+        }
+
         $groupedTickets = $this->groupSimilarTickets($tickets);
 
-        $faqs = collect();
+        $faqs = (new KnowledgeArticle)->newCollection();
 
         foreach ($groupedTickets as $group) {
             if ($group->count() < $minOccurrences) {
@@ -227,7 +241,7 @@ class KnowledgeService
             $representativeTicket = $group->first();
             $solution = $this->extractSolution($representativeTicket);
 
-            if (!$solution) {
+            if (! $solution) {
                 continue;
             }
 
@@ -238,7 +252,7 @@ class KnowledgeService
                 'status' => KnowledgeArticleStatus::Draft,
                 'is_faq' => true,
                 'is_public' => true,
-                'keywords' => $this->extractKeywords($representativeTicket->subject . ' ' . $representativeTicket->description),
+                'keywords' => $this->extractKeywords($representativeTicket->subject.' '.$representativeTicket->description),
                 'meta' => [
                     'source_tickets' => $group->pluck('id')->toArray(),
                     'average_rating' => $group->avg('rating.rating'),
@@ -278,7 +292,7 @@ class KnowledgeService
                 }
             }
 
-            if (!$added) {
+            if (! $added) {
                 $groups->push(collect([$ticket]));
             }
         }
@@ -288,8 +302,8 @@ class KnowledgeService
 
     protected function areTicketsSimilar(Ticket $ticket1, Ticket $ticket2): bool
     {
-        $keywords1 = $this->extractKeywords($ticket1->subject . ' ' . $ticket1->description);
-        $keywords2 = $this->extractKeywords($ticket2->subject . ' ' . $ticket2->description);
+        $keywords1 = $this->extractKeywords($ticket1->subject.' '.$ticket1->description);
+        $keywords2 = $this->extractKeywords($ticket2->subject.' '.$ticket2->description);
 
         $commonKeywords = array_intersect($keywords1, $keywords2);
         $similarity = count($commonKeywords) / max(count($keywords1), count($keywords2), 1);
@@ -299,20 +313,25 @@ class KnowledgeService
 
     protected function extractSolution(Ticket $ticket): ?string
     {
-        $resolutionComment = $ticket->comments()
+        if ($ticket->relationLoaded('comments')) {
+            return $ticket->comments
+                ->where('is_internal', false)
+                ->sortByDesc('created_at')
+                ->first()?->body;
+        }
+
+        return $ticket->comments()
             ->where('is_internal', false)
             ->orderByDesc('created_at')
-            ->first();
-
-        return $resolutionComment?->body;
+            ->value('body');
     }
 
     protected function generateFAQTitle(Ticket $ticket): string
     {
         $title = $ticket->subject;
 
-        if (!Str::endsWith($title, '?')) {
-            $title = "How to " . Str::lower($title);
+        if (! Str::endsWith($title, '?')) {
+            $title = 'How to '.Str::lower($title);
         }
 
         return Str::limit($title, 100);
@@ -321,18 +340,18 @@ class KnowledgeService
     protected function generateFAQContent(Ticket $ticket, string $solution): string
     {
         $content = "## Problem\n\n";
-        $content .= $ticket->description . "\n\n";
+        $content .= $ticket->description."\n\n";
         $content .= "## Solution\n\n";
-        $content .= $solution . "\n\n";
+        $content .= $solution."\n\n";
 
         if ($ticket->categories->isNotEmpty()) {
             $content .= "## Related Categories\n\n";
-            $content .= $ticket->categories->pluck('name')->implode(', ') . "\n\n";
+            $content .= $ticket->categories->pluck('name')->implode(', ')."\n\n";
         }
 
         if ($ticket->tags->isNotEmpty()) {
             $content .= "## Tags\n\n";
-            $content .= $ticket->tags->pluck('name')->implode(', ') . "\n";
+            $content .= $ticket->tags->pluck('name')->implode(', ')."\n";
         }
 
         return $content;
@@ -347,7 +366,7 @@ class KnowledgeService
         $stopWords = $this->getStopWords();
 
         $keywords = array_filter($words, function ($word) use ($stopWords) {
-            return strlen($word) > 2 && !in_array($word, $stopWords);
+            return strlen($word) > 2 && ! in_array($word, $stopWords);
         });
 
         return array_values(array_unique($keywords));
@@ -361,7 +380,7 @@ class KnowledgeService
             'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'to',
             'of', 'in', 'for', 'with', 'from', 'up', 'about', 'into', 'through',
             'during', 'before', 'after', 'above', 'below', 'between', 'under',
-            'again', 'further', 'then', 'once'
+            'again', 'further', 'then', 'once',
         ];
     }
 
@@ -383,6 +402,11 @@ class KnowledgeService
         return min($baseScore, 100);
     }
 
+    private function newSuggestionCollection(array $suggestions = []): Collection
+    {
+        return (new KnowledgeSuggestion)->newCollection($suggestions);
+    }
+
     public function trackArticleView(KnowledgeArticle $article, ?Ticket $ticket = null): void
     {
         $article->incrementViewCount();
@@ -401,8 +425,8 @@ class KnowledgeService
     public function searchArticles(string $query, ?KnowledgeSection $section = null, bool $publicOnly = true): Builder
     {
         return KnowledgeArticle::query()
-            ->when($publicOnly, fn($q) => $q->published())
-            ->when($section, fn($q) => $q->inSection($section))
+            ->when($publicOnly, fn ($q) => $q->published())
+            ->when($section, fn ($q) => $q->inSection($section))
             ->where(function ($q) use ($query) {
                 $q->where('title', 'LIKE', "%{$query}%")
                     ->orWhere('content', 'LIKE', "%{$query}%")

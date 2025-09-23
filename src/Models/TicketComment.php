@@ -26,7 +26,6 @@ class TicketComment extends Model
         'meta' => AsArrayObject::class,
     ];
 
-
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class);

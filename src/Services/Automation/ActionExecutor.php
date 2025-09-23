@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Log;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Events\TicketEscalated;
-use LucaLongo\LaravelHelpdesk\Models\Tag;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketComment;
 

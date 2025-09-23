@@ -5,7 +5,6 @@ namespace LucaLongo\LaravelHelpdesk\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class TicketTimeEntry extends Model
 {
@@ -36,7 +35,7 @@ class TicketTimeEntry extends Model
         parent::boot();
 
         static::saving(function (TicketTimeEntry $entry) {
-            if ($entry->ended_at && $entry->started_at && !$entry->duration_minutes) {
+            if ($entry->ended_at && $entry->started_at && ! $entry->duration_minutes) {
                 $entry->duration_minutes = $entry->started_at->diffInMinutes($entry->ended_at);
             }
         });
@@ -56,12 +55,12 @@ class TicketTimeEntry extends Model
 
     public function isRunning(): bool
     {
-        return $this->started_at && !$this->ended_at;
+        return $this->started_at && ! $this->ended_at;
     }
 
     public function stop(): self
     {
-        if (!$this->isRunning()) {
+        if (! $this->isRunning()) {
             return $this;
         }
 
@@ -79,7 +78,7 @@ class TicketTimeEntry extends Model
 
     public function getTotalCostAttribute(): ?float
     {
-        if (!$this->is_billable || !$this->hourly_rate) {
+        if (! $this->is_billable || ! $this->hourly_rate) {
             return null;
         }
 

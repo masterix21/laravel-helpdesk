@@ -9,7 +9,7 @@ use LucaLongo\LaravelHelpdesk\Models\TicketTimeEntry;
 use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
 
 beforeEach(function () {
-    $this->service = new TimeTrackingService();
+    $this->service = new TimeTrackingService;
     $this->ticket = Ticket::factory()->create();
 });
 

@@ -4,7 +4,6 @@ namespace LucaLongo\LaravelHelpdesk\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 use LucaLongo\LaravelHelpdesk\Events\TimeEntryStarted;
 use LucaLongo\LaravelHelpdesk\Events\TimeEntryStopped;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
@@ -39,7 +38,7 @@ class TimeTrackingService
     {
         $entry = TicketTimeEntry::find($entryId);
 
-        if (!$entry || !$entry->isRunning()) {
+        if (! $entry || ! $entry->isRunning()) {
             return null;
         }
 
@@ -103,7 +102,7 @@ class TimeTrackingService
             $query->billable();
         }
 
-        return $query->sum('duration_minutes') ?? 0;
+        return $query->sum('duration_minutes') ?: 0;
     }
 
     public function getTicketTotalCost(int $ticketId): float
@@ -139,6 +138,7 @@ class TimeTrackingService
 
         $byTicket = $entries->groupBy('ticket_id')->map(function ($ticketEntries) {
             $ticket = $ticketEntries->first()->ticket;
+
             return [
                 'ticket' => $ticket,
                 'total_minutes' => $ticketEntries->sum('duration_minutes'),
@@ -181,6 +181,7 @@ class TimeTrackingService
 
         $byUser = $entries->groupBy('user_id')->map(function ($userEntries) {
             $user = $userEntries->first()->user;
+
             return [
                 'user' => $user,
                 'total_minutes' => $userEntries->sum('duration_minutes'),
@@ -192,6 +193,7 @@ class TimeTrackingService
 
         $byTicket = $entries->groupBy('ticket_id')->map(function ($ticketEntries) {
             $ticket = $ticketEntries->first()->ticket;
+
             return [
                 'ticket' => $ticket,
                 'total_minutes' => $ticketEntries->sum('duration_minutes'),
@@ -227,7 +229,7 @@ class TimeTrackingService
     ): ?TicketTimeEntry {
         $entry = TicketTimeEntry::find($entryId);
 
-        if (!$entry) {
+        if (! $entry) {
             return null;
         }
 

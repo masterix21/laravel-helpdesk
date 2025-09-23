@@ -9,6 +9,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property ?string $description
+ * @property string $trigger
+ * @property \ArrayObject $conditions
+ * @property \ArrayObject $actions
+ * @property int $priority
+ * @property bool $is_active
+ * @property bool $stop_processing
+ * @property ?\DateTimeInterface $last_executed_at
+ * @property \DateTimeInterface $created_at
+ * @property \DateTimeInterface $updated_at
+ */
 class AutomationRule extends Model
 {
     use HasFactory;

@@ -10,8 +10,8 @@ use LucaLongo\LaravelHelpdesk\Events\TicketMerged;
 use LucaLongo\LaravelHelpdesk\Events\TicketRelationCreated;
 use LucaLongo\LaravelHelpdesk\Events\TicketRelationRemoved;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
-use LucaLongo\LaravelHelpdesk\Models\TicketComment;
 use LucaLongo\LaravelHelpdesk\Models\TicketAttachment;
+use LucaLongo\LaravelHelpdesk\Models\TicketComment;
 use LucaLongo\LaravelHelpdesk\Models\TicketRelation;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Tests\Fakes\User;
@@ -70,7 +70,7 @@ describe('ticket merging', function () {
         $target = Ticket::factory()->create();
         $source = Ticket::factory()->create(['merged_to_id' => 999]);
 
-        expect(fn() => $this->ticketService->mergeTickets($target, $source))
+        expect(fn () => $this->ticketService->mergeTickets($target, $source))
             ->toThrow(InvalidArgumentException::class);
     });
 
@@ -133,7 +133,7 @@ describe('ticket relations', function () {
 
         $this->ticketService->createRelation($ticket1, $ticket2, TicketRelationType::Related);
 
-        expect(fn() => $this->ticketService->createRelation($ticket1, $ticket2, TicketRelationType::Related))
+        expect(fn () => $this->ticketService->createRelation($ticket1, $ticket2, TicketRelationType::Related))
             ->toThrow(InvalidArgumentException::class);
     });
 

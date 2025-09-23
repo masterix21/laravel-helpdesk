@@ -8,16 +8,49 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Kalnoy\Nestedset\NodeTrait;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
+use Kalnoy\Nestedset\NodeTrait;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 
+/**
+ * @property int $id
+ * @property string $ulid
+ * @property TicketType $type
+ * @property string $subject
+ * @property ?string $description
+ * @property TicketStatus $status
+ * @property TicketPriority $priority
+ * @property ?string $ticket_number
+ * @property ?string $customer_name
+ * @property ?string $customer_email
+ * @property ?\ArrayObject $meta
+ * @property ?\DateTimeInterface $opened_at
+ * @property ?\DateTimeInterface $closed_at
+ * @property ?\DateTimeInterface $due_at
+ * @property ?\DateTimeInterface $first_response_at
+ * @property ?\DateTimeInterface $first_response_due_at
+ * @property ?\DateTimeInterface $resolution_due_at
+ * @property bool $sla_breached
+ * @property ?string $sla_breach_type
+ * @property ?int $response_time_minutes
+ * @property ?int $resolution_time_minutes
+ * @property ?string $opened_by_type
+ * @property ?int $opened_by_id
+ * @property ?string $assigned_to_type
+ * @property ?int $assigned_to_id
+ * @property ?int $merged_to_id
+ * @property ?\DateTimeInterface $merged_at
+ * @property ?string $merge_reason
+ * @property ?int $parent_id
+ * @property \DateTimeInterface $created_at
+ * @property \DateTimeInterface $updated_at
+ */
 class Ticket extends Model
 {
     use HasFactory, NodeTrait;
@@ -72,7 +105,6 @@ class Ticket extends Model
         'sla_breached' => 'boolean',
         'merged_at' => 'datetime',
     ];
-
 
     protected static function booted(): void
     {
@@ -242,7 +274,7 @@ class Ticket extends Model
 
     public function isAssignedTo(Model $assignee): bool
     {
-        if (!$this->assigned_to_type || !$this->assigned_to_id) {
+        if (! $this->assigned_to_type || ! $this->assigned_to_id) {
             return false;
         }
 
@@ -252,7 +284,7 @@ class Ticket extends Model
 
     public function shouldQueueSlaAlert(): bool
     {
-        if (!$this->due_at || $this->status->isTerminal()) {
+        if (! $this->due_at || $this->status->isTerminal()) {
             return false;
         }
 
@@ -423,7 +455,7 @@ class Ticket extends Model
 
     public function isFirstResponseOverdue(): bool
     {
-        if ($this->first_response_at || !$this->first_response_due_at) {
+        if ($this->first_response_at || ! $this->first_response_due_at) {
             return false;
         }
 
@@ -432,7 +464,7 @@ class Ticket extends Model
 
     public function isResolutionOverdue(): bool
     {
-        if ($this->status->isTerminal() || !$this->resolution_due_at) {
+        if ($this->status->isTerminal() || ! $this->resolution_due_at) {
             return false;
         }
 
@@ -444,7 +476,7 @@ class Ticket extends Model
         $dueField = $type === 'first_response' ? 'first_response_due_at' : 'resolution_due_at';
         $responseField = $type === 'first_response' ? 'first_response_at' : 'closed_at';
 
-        if (!$this->$dueField) {
+        if (! $this->$dueField) {
             return null;
         }
 

@@ -97,3 +97,4 @@ The package config (`config/helpdesk.php`) defines:
 - Typed properties over docblocks
 - Early returns for better readability
 - Use the early returns.
+- Never put ulid or uuid fields to $fillables

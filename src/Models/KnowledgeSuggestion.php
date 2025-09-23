@@ -38,7 +38,7 @@ class KnowledgeSuggestion extends Model
 
     public function markAsViewed(): void
     {
-        if (!$this->was_viewed) {
+        if (! $this->was_viewed) {
             $this->update([
                 'was_viewed' => true,
                 'viewed_at' => now(),

@@ -3,16 +3,16 @@
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
-use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Events\TicketRated;
 use LucaLongo\LaravelHelpdesk\Events\TicketRatingUpdated;
+use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketRating;
 use LucaLongo\LaravelHelpdesk\Services\RatingService;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->service = new RatingService();
+    $this->service = new RatingService;
     $this->user = new \LucaLongo\LaravelHelpdesk\Tests\Fakes\User(['id' => 1]);
     $this->ticket = Ticket::factory()->create([
         'opened_by_type' => get_class($this->user),

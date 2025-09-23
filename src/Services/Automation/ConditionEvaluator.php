@@ -2,11 +2,29 @@
 
 namespace LucaLongo\LaravelHelpdesk\Services\Automation;
 
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use LucaLongo\LaravelHelpdesk\Models\Category;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 
 class ConditionEvaluator
 {
     protected array $evaluators = [];
+
+    /**
+     * @var array<string, array<string, mixed>>
+     */
+    protected array $ticketCache = [];
+
+    /**
+     * @var array<int, Category|null>
+     */
+    protected array $categoryCache = [];
+
+    /**
+     * @var array<int, array<int>>
+     */
+    protected array $categoryDescendantsCache = [];
 
     public function __construct()
     {
@@ -20,18 +38,22 @@ class ConditionEvaluator
 
     public function evaluate($conditions, Ticket $ticket): bool
     {
+        $this->resetCache();
+
         if (empty($conditions)) {
             return true;
         }
 
-        $operator = $conditions['operator'] ?? 'and';
+        $operator = strtolower($conditions['operator'] ?? 'and');
         $rules = $conditions['rules'] ?? [];
 
         if ($operator === 'and') {
             foreach ($rules as $rule) {
-                if (! $this->evaluateRule($rule, $ticket)) {
-                    return false;
+                if ($this->evaluateRule($rule, $ticket)) {
+                    continue;
                 }
+
+                return false;
             }
 
             return true;
@@ -85,8 +107,8 @@ class ConditionEvaluator
             }
 
             $priorities = ['low', 'normal', 'high', 'urgent'];
-            $currentIndex = array_search($ticket->priority?->value, $priorities);
-            $expectedIndex = array_search($expectedPriority, $priorities);
+            $currentIndex = array_search($ticket->priority?->value, $priorities, true);
+            $expectedIndex = array_search($expectedPriority, $priorities, true);
 
             if ($currentIndex === false || $expectedIndex === false) {
                 return false;
@@ -111,57 +133,53 @@ class ConditionEvaluator
         });
 
         $this->registerEvaluator('has_category', function ($rule, $ticket) {
-            $categoryId = $rule['value'] ?? null;
-            $includeDescendants = $rule['include_descendants'] ?? false;
+            $categoryId = isset($rule['value']) ? (int) $rule['value'] : null;
 
-            if ($includeDescendants) {
-                $category = \LucaLongo\LaravelHelpdesk\Models\Category::find($categoryId);
-                if (! $category) {
-                    return false;
-                }
-
-                $categoryIds = array_merge(
-                    [$categoryId],
-                    $category->getAllDescendants()->pluck('id')->toArray()
-                );
-
-                return $ticket->categories()->whereIn('category_id', $categoryIds)->exists();
-            }
-
-            return $ticket->categories()->where('category_id', $categoryId)->exists();
-        });
-
-        $this->registerEvaluator('has_tag', function ($rule, $ticket) {
-            $tagIds = (array) ($rule['value'] ?? []);
-            $operator = $rule['operator'] ?? 'any';
-
-            if (empty($tagIds)) {
+            if ($categoryId === null) {
                 return false;
             }
 
-            if ($operator === 'any') {
-                return $ticket->tags()->whereIn('tag_id', $tagIds)->exists();
-            }
+            if (($rule['include_descendants'] ?? false) === true) {
+                $categoryIds = $this->categoryAndDescendantIds($categoryId);
 
-            if ($operator === 'all') {
-                foreach ($tagIds as $tagId) {
-                    if (! $ticket->tags()->where('tag_id', $tagId)->exists()) {
-                        return false;
-                    }
+                if ($categoryIds === []) {
+                    return false;
                 }
 
-                return true;
+                return $this->ticketCategoryIds($ticket)
+                    ->intersect($categoryIds)
+                    ->isNotEmpty();
+            }
+
+            return $this->ticketCategoryIds($ticket)
+                ->contains(fn ($id) => (int) $id === $categoryId);
+        });
+
+        $this->registerEvaluator('has_tag', function ($rule, $ticket) {
+            $tagIds = collect((array) ($rule['value'] ?? []))
+                ->filter()
+                ->map(fn ($id) => (int) $id);
+
+            if ($tagIds->isEmpty()) {
+                return false;
+            }
+
+            $ticketTagIds = $this->ticketTagIds($ticket);
+            $operator = $rule['operator'] ?? 'any';
+
+            if ($operator === 'all') {
+                return $tagIds->diff($ticketTagIds)->isEmpty();
             }
 
             if ($operator === 'none') {
-                return ! $ticket->tags()->whereIn('tag_id', $tagIds)->exists();
+                return $ticketTagIds->intersect($tagIds)->isEmpty();
             }
 
-            return false;
+            return $ticketTagIds->intersect($tagIds)->isNotEmpty();
         });
 
         $this->registerEvaluator('time_since_created', function ($rule, $ticket) {
-            $minutes = $rule['value'] ?? 0;
+            $minutes = (int) ($rule['value'] ?? 0);
             $operator = $rule['operator'] ?? 'greater_than';
 
             $minutesSinceCreated = $ticket->created_at->diffInMinutes(now());
@@ -176,10 +194,10 @@ class ConditionEvaluator
         });
 
         $this->registerEvaluator('time_since_last_update', function ($rule, $ticket) {
-            $minutes = $rule['value'] ?? 0;
+            $minutes = (int) ($rule['value'] ?? 0);
             $operator = $rule['operator'] ?? 'greater_than';
 
-            $lastActivity = $ticket->comments()->latest()->first()?->created_at ?? $ticket->updated_at;
+            $lastActivity = $this->ticketLastActivityAt($ticket);
             $minutesSinceActivity = $lastActivity->diffInMinutes(now());
 
             return match ($operator) {
@@ -220,9 +238,9 @@ class ConditionEvaluator
         });
 
         $this->registerEvaluator('comment_count', function ($rule, $ticket) {
-            $count = $rule['value'] ?? 0;
+            $count = (int) ($rule['value'] ?? 0);
             $operator = $rule['operator'] ?? 'equals';
-            $commentCount = $ticket->comments()->count();
+            $commentCount = $this->ticketCommentCount($ticket);
 
             return match ($operator) {
                 'equals' => $commentCount === $count,
@@ -240,7 +258,7 @@ class ConditionEvaluator
             $operator = $rule['operator'] ?? 'any';
             $subject = strtolower($ticket->subject ?? '');
 
-            if (empty($keywords)) {
+            if ($keywords === []) {
                 return false;
             }
 
@@ -283,6 +301,119 @@ class ConditionEvaluator
                 'not_empty' => ! empty($fieldValue),
                 default => false,
             };
+        });
+    }
+
+    protected function resetCache(): void
+    {
+        $this->ticketCache = [];
+        $this->categoryCache = [];
+        $this->categoryDescendantsCache = [];
+    }
+
+    private function ticketCacheKey(Ticket $ticket): string
+    {
+        return (string) ($ticket->getKey() ?? spl_object_id($ticket));
+    }
+
+    private function rememberTicketData(Ticket $ticket, string $key, callable $resolver): mixed
+    {
+        $cacheKey = $this->ticketCacheKey($ticket);
+
+        if (! isset($this->ticketCache[$cacheKey][$key])) {
+            $this->ticketCache[$cacheKey][$key] = $resolver();
+        }
+
+        return $this->ticketCache[$cacheKey][$key];
+    }
+
+    private function rememberCategory(int $categoryId): ?Category
+    {
+        if (! array_key_exists($categoryId, $this->categoryCache)) {
+            $this->categoryCache[$categoryId] = Category::find($categoryId);
+        }
+
+        return $this->categoryCache[$categoryId];
+    }
+
+    private function categoryAndDescendantIds(int $categoryId): array
+    {
+        if (! array_key_exists($categoryId, $this->categoryDescendantsCache)) {
+            $category = $this->rememberCategory($categoryId);
+
+            if (! $category) {
+                $this->categoryDescendantsCache[$categoryId] = [];
+            } else {
+                $descendantIds = $category->getAllDescendants()->pluck('id')->all();
+                $this->categoryDescendantsCache[$categoryId] = array_merge([$categoryId], $descendantIds);
+            }
+        }
+
+        return $this->categoryDescendantsCache[$categoryId];
+    }
+
+    private function ticketCategoryIds(Ticket $ticket): Collection
+    {
+        return $this->rememberTicketData($ticket, 'category_ids', function () use ($ticket) {
+            if ($ticket->relationLoaded('categories')) {
+                return $ticket->categories->pluck('id');
+            }
+
+            return $ticket->categories()->get()->pluck('id');
+        });
+    }
+
+    private function ticketTagIds(Ticket $ticket): Collection
+    {
+        return $this->rememberTicketData($ticket, 'tag_ids', function () use ($ticket) {
+            if ($ticket->relationLoaded('tags')) {
+                return $ticket->tags->pluck('id');
+            }
+
+            return $ticket->tags()->get()->pluck('id');
+        });
+    }
+
+    private function ticketCommentCount(Ticket $ticket): int
+    {
+        return $this->rememberTicketData($ticket, 'comment_count', function () use ($ticket) {
+            if ($ticket->relationLoaded('comments')) {
+                return $ticket->comments->count();
+            }
+
+            return $ticket->comments()->count();
+        });
+    }
+
+    private function ticketLatestCommentAt(Ticket $ticket): ?Carbon
+    {
+        return $this->rememberTicketData($ticket, 'latest_comment_at', function () use ($ticket) {
+            if ($ticket->relationLoaded('comments')) {
+                $latest = $ticket->comments->max('created_at');
+
+                if ($latest instanceof Carbon) {
+                    return $latest;
+                }
+
+                return $latest ? Carbon::parse($latest) : null;
+            }
+
+            $comment = $ticket->comments()->latest()->first();
+
+            return $comment?->created_at;
+        });
+    }
+
+    private function ticketLastActivityAt(Ticket $ticket): Carbon
+    {
+        return $this->rememberTicketData($ticket, 'last_activity_at', function () use ($ticket) {
+            $latestCommentAt = $this->ticketLatestCommentAt($ticket);
+
+            if ($latestCommentAt !== null) {
+                return $latestCommentAt;
+            }
+
+            return $ticket->updated_at;
         });
     }
 }

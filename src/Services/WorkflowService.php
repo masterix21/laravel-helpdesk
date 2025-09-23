@@ -138,7 +138,8 @@ class WorkflowService
 
     public function getAvailableTransitions(Ticket $ticket, ?string $workflow = null): array
     {
-        $workflow = $this->getWorkflow($workflow ?? 'default');
+        $workflowName = $workflow ?? 'default';
+        $workflowData = $this->getWorkflow($workflowName);
         $currentStatus = $ticket->status;
         $available = [];
 
@@ -147,12 +148,12 @@ class WorkflowService
                 continue;
             }
 
-            if (! $this->canTransition($ticket, $status, $workflow)) {
+            if (! $this->canTransition($ticket, $status, $workflowName)) {
                 continue;
             }
 
             $transitionKey = "{$currentStatus->value}:{$status->value}";
-            $transition = $workflow['transitions'][$transitionKey] ?? [];
+            $transition = $workflowData['transitions'][$transitionKey] ?? [];
 
             $available[] = [
                 'status' => $status,
