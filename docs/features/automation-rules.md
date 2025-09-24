@@ -19,6 +19,8 @@ Process a ticket against all active automation rules.
 
 ```php
 use LucaLongo\LaravelHelpdesk\Services\AutomationService;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
 
 $service = app(AutomationService::class);
 
@@ -43,7 +45,7 @@ $results = $service->processTicket($ticket, 'manual');
 Process a collection of tickets in batch.
 
 ```php
-$tickets = Ticket::where('status', 'open')->get();
+$tickets = Ticket::where('status', TicketStatus::Open->value)->get();
 $results = $service->processBatch($tickets, 'batch');
 ```
 
@@ -71,7 +73,7 @@ $rule = $service->createRule([
         [
             'field' => 'priority',
             'operator' => 'equals',
-            'value' => 'urgent'
+            'value' => TicketPriority::Urgent->value
         ]
     ],
     'actions' => [
@@ -247,7 +249,7 @@ Configure automation in `config/helpdesk.php`:
             'name' => 'Urgent Ticket Escalation',
             'trigger' => 'ticket_created',
             'conditions' => [
-                ['field' => 'priority', 'operator' => 'equals', 'value' => 'urgent']
+                ['field' => 'priority', 'operator' => 'equals', 'value' => TicketPriority::Urgent->value]
             ],
             'actions' => [
                 ['type' => 'notify', 'recipient' => 'manager@company.com']
@@ -266,7 +268,7 @@ $service->createRule([
     'name' => 'High Priority Auto-Assignment',
     'trigger' => 'ticket_created',
     'conditions' => [
-        ['field' => 'priority', 'operator' => 'in', 'value' => ['high', 'urgent']]
+        ['field' => 'priority', 'operator' => 'in', 'value' => [TicketPriority::High->value, TicketPriority::Urgent->value]]
     ],
     'actions' => [
         ['type' => 'assign', 'assignee_type' => 'team', 'assignee_id' => 'senior-support']
@@ -285,7 +287,7 @@ $service->createRule([
         ['field' => 'sla_status', 'operator' => 'equals', 'value' => 'approaching']
     ],
     'actions' => [
-        ['type' => 'change_priority', 'value' => 'urgent'],
+        ['type' => 'change_priority', 'value' => TicketPriority::Urgent->value],
         ['type' => 'notify', 'recipient' => 'escalation@company.com'],
         ['type' => 'add_comment', 'body' => 'SLA breach imminent - escalated automatically']
     ],
@@ -320,7 +322,7 @@ $service->createRule([
     ],
     'actions' => [
         ['type' => 'add_comment', 'body' => 'Please use the password reset link in your email.'],
-        ['type' => 'change_status', 'value' => 'resolved'],
+        ['type' => 'change_status', 'value' => TicketStatus::Resolved->value],
         ['type' => 'apply_template', 'template' => 'password-reset-instructions']
     ],
     'stop_processing' => true, // Don't run other rules
@@ -349,8 +351,8 @@ The automation system supports various condition operators:
 
 ```php
 'conditions' => [
-    ['field' => 'status', 'operator' => 'equals', 'value' => 'open'],
-    ['field' => 'priority', 'operator' => 'in', 'value' => ['high', 'urgent']],
+    ['field' => 'status', 'operator' => 'equals', 'value' => TicketStatus::Open->value],
+    ['field' => 'priority', 'operator' => 'in', 'value' => [TicketPriority::High->value, TicketPriority::Urgent->value]],
     ['field' => 'subject', 'operator' => 'contains', 'value' => 'refund'],
     ['field' => 'created_at', 'operator' => 'older_than', 'value' => '24 hours'],
     ['field' => 'assignee', 'operator' => 'is_null'],
@@ -368,8 +370,8 @@ Available automation actions:
     ['type' => 'assign', 'assignee_type' => 'User', 'assignee_id' => 1],
 
     // Status changes
-    ['type' => 'change_status', 'value' => 'in_progress'],
-    ['type' => 'change_priority', 'value' => 'high'],
+    ['type' => 'change_status', 'value' => TicketStatus::InProgress->value],
+    ['type' => 'change_priority', 'value' => TicketPriority::High->value],
 
     // Communication
     ['type' => 'add_comment', 'body' => 'Automated response', 'is_internal' => false],
@@ -411,7 +413,7 @@ Define reusable rule templates in configuration:
             ['field' => 'customer_email', 'operator' => 'ends_with', 'value' => '@vip.com']
         ],
         'actions' => [
-            ['type' => 'change_priority', 'value' => 'urgent'],
+            ['type' => 'change_priority', 'value' => TicketPriority::Urgent->value],
             ['type' => 'assign', 'assignee_type' => 'team', 'assignee_id' => 'vip-support']
         ]
     ]
@@ -424,7 +426,7 @@ Process multiple tickets efficiently:
 
 ```php
 // Process all open tickets daily
-$openTickets = Ticket::where('status', 'open')->get();
+$openTickets = Ticket::where('status', TicketStatus::Open->value)->get();
 $results = $service->processBatch($openTickets, 'daily_review');
 
 // Log batch results

@@ -19,6 +19,8 @@ Retrieve templates applicable to a specific ticket based on its type.
 
 ```php
 use LucaLongo\LaravelHelpdesk\Services\ResponseTemplateService;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 
 $service = app(ResponseTemplateService::class);
 
@@ -484,15 +486,15 @@ class AutoTemplateService
         $rules = [
             'ticket_created' => [
                 'template' => 'welcome',
-                'conditions' => ['status' => 'open']
+                'conditions' => ['status' => TicketStatus::Open->value]
             ],
             'ticket_resolved' => [
                 'template' => 'resolved',
-                'conditions' => ['status' => 'resolved']
+                'conditions' => ['status' => TicketStatus::Resolved->value]
             ],
             'awaiting_response' => [
                 'template' => 'awaiting-response',
-                'conditions' => ['status' => 'pending']
+                'conditions' => ['status' => 'pending'] // Note: 'pending' is not a standard TicketStatus enum value
             ]
         ];
 

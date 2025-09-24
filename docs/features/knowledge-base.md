@@ -19,6 +19,9 @@ Automatically suggest relevant knowledge base articles for a ticket using multip
 
 ```php
 use LucaLongo\LaravelHelpdesk\Services\KnowledgeService;
+use LucaLongo\LaravelHelpdesk\Enums\KnowledgeArticleStatus;
+use LucaLongo\LaravelHelpdesk\Enums\KnowledgeArticleRelationType;
+use LucaLongo\LaravelHelpdesk\Enums\KnowledgeSuggestionMatchType;
 
 $service = app(KnowledgeService::class);
 
@@ -728,7 +731,7 @@ Schema::create('helpdesk_knowledge_articles', function (Blueprint $table) {
     $table->string('slug')->unique();
     $table->text('excerpt')->nullable();
     $table->longText('content');
-    $table->string('status')->default('draft');
+    $table->string('status')->default(KnowledgeArticleStatus::Draft->value);
     $table->boolean('is_featured')->default(false);
     $table->boolean('is_faq')->default(false);
     $table->boolean('is_public')->default(true);

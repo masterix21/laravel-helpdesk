@@ -12,13 +12,14 @@ The `TicketService` class provides the main interface for managing tickets.
 
 ```php
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 
 $ticketService = app(TicketService::class);
 
 // Basic ticket creation
 $ticket = $ticketService->open([
-    'type' => 'product_support',
+    'type' => TicketType::ProductSupport,
     'subject' => 'Cannot access dashboard',
     'description' => 'Getting 404 error when accessing /dashboard',
     'priority' => TicketPriority::High,
@@ -26,14 +27,14 @@ $ticket = $ticketService->open([
 
 // With opener reference
 $ticket = $ticketService->open([
-    'type' => 'commercial',
+    'type' => TicketType::Commercial,
     'subject' => 'Quote request',
     'description' => 'Need pricing for enterprise plan',
 ], $customer);
 
 // With custom metadata
 $ticket = $ticketService->open([
-    'type' => 'product_support',
+    'type' => TicketType::ProductSupport,
     'subject' => 'API Integration Issue',
     'description' => 'Webhook not firing',
     'meta' => [
@@ -236,20 +237,23 @@ use LucaLongo\LaravelHelpdesk\Events\*;
 Ticket behavior is configured in `config/helpdesk.php`:
 
 ```php
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+
 'defaults' => [
     'due_minutes' => 1440,  // 24 hours default due time
-    'priority' => 'normal',  // Default priority
+    'priority' => TicketPriority::Normal->value,  // Default priority
 ],
 
 'types' => [
-    'product_support' => [
+    TicketType::ProductSupport->value => [
         'label' => 'Product Support',
-        'default_priority' => 'normal',
+        'default_priority' => TicketPriority::Normal->value,
         'due_minutes' => 720,  // 12 hours
     ],
-    'commercial' => [
+    TicketType::Commercial->value => [
         'label' => 'Commercial',
-        'default_priority' => 'high',
+        'default_priority' => TicketPriority::High->value,
         'due_minutes' => 480,  // 8 hours
     ],
 ],

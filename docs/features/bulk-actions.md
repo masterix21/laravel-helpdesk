@@ -19,13 +19,15 @@ Apply a bulk action to a list of ticket IDs.
 
 ```php
 use LucaLongo\LaravelHelpdesk\Services\BulkActionService;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 
 $service = app(BulkActionService::class);
 
 $results = $service->applyAction(
     action: 'change_status',
     ticketIds: [1, 2, 3, 4, 5],
-    params: ['status' => 'resolved']
+    params: ['status' => TicketStatus::Resolved->value]
 );
 ```
 
@@ -51,8 +53,8 @@ $results = $service->applyAction(
 Apply an action to tickets matching query criteria.
 
 ```php
-$query = Ticket::where('status', 'open')
-    ->where('priority', 'low')
+$query = Ticket::where('status', TicketStatus::Open->value)
+    ->where('priority', TicketPriority::Low->value)
     ->where('created_at', '<', now()->subDays(30));
 
 $results = $service->applyActionWithFilter(
@@ -68,8 +70,8 @@ Build a query based on filter criteria.
 
 ```php
 $query = $service->buildFilterQuery([
-    'status' => ['open', 'in_progress'],
-    'priority' => 'urgent',
+    'status' => [TicketStatus::Open->value, TicketStatus::InProgress->value],
+    'priority' => TicketPriority::Urgent->value,
     'assigned' => false,
     'created_after' => '2023-01-01',
     'sla_status' => 'breached',
@@ -105,7 +107,7 @@ Change the status of multiple tickets.
 
 ```php
 $service->applyAction('change_status', $ticketIds, [
-    'status' => 'resolved'
+    'status' => TicketStatus::Resolved->value
 ]);
 ```
 
@@ -115,7 +117,7 @@ Modify ticket priority levels.
 
 ```php
 $service->applyAction('change_priority', $ticketIds, [
-    'priority' => 'high'
+    'priority' => TicketPriority::High->value
 ]);
 ```
 
@@ -210,15 +212,15 @@ The `buildFilterQuery` method supports various filter criteria:
 ### Status Filters
 
 ```php
-'status' => 'open',                    // Single status
-'status' => ['open', 'in_progress'],   // Multiple statuses
+'status' => TicketStatus::Open->value,                    // Single status
+'status' => [TicketStatus::Open->value, TicketStatus::InProgress->value],   // Multiple statuses
 ```
 
 ### Priority Filters
 
 ```php
-'priority' => 'urgent',
-'priority' => ['high', 'urgent'],
+'priority' => TicketPriority::Urgent->value,
+'priority' => [TicketPriority::High->value, TicketPriority::Urgent->value],
 ```
 
 ### Assignment Filters
@@ -268,9 +270,9 @@ $service = app(BulkActionService::class);
 
 $results = $service->applyActionWithFilter(
     action: 'change_status',
-    query: Ticket::where('status', 'open')
+    query: Ticket::where('status', TicketStatus::Open->value)
         ->where('created_at', '<', now()->subDays(30)),
-    params: ['status' => 'closed']
+    params: ['status' => TicketStatus::Closed->value]
 );
 
 Log::info("Bulk status update completed", $results);
@@ -281,9 +283,9 @@ Log::info("Bulk status update completed", $results);
 Escalate all urgent unassigned tickets:
 
 ```php
-$urgentQuery = Ticket::where('priority', 'urgent')
+$urgentQuery = Ticket::where('priority', TicketPriority::Urgent->value)
     ->whereNull('assigned_to_id')
-    ->where('status', 'open');
+    ->where('status', TicketStatus::Open->value);
 
 $results = $service->applyActionWithFilter(
     action: 'assign',
@@ -318,7 +320,7 @@ Add seasonal tags to relevant tickets:
 // Find all tickets mentioning holiday issues
 $filters = [
     'search' => 'holiday',
-    'status' => ['open', 'in_progress'],
+    'status' => [TicketStatus::Open->value, TicketStatus::InProgress->value],
     'created_after' => '2023-11-01'
 ];
 
@@ -347,7 +349,7 @@ $query = $service->buildFilterQuery($filters);
 $priorityResults = $service->applyActionWithFilter(
     action: 'change_priority',
     query: clone $query,
-    params: ['priority' => 'urgent']
+    params: ['priority' => TicketPriority::Urgent->value]
 );
 
 $assignResults = $service->applyActionWithFilter(
@@ -367,12 +369,12 @@ Update tickets from VIP customers:
 ```php
 $vipQuery = Ticket::whereHas('customer', function ($q) {
     $q->where('tier', 'vip');
-})->where('priority', '!=', 'urgent');
+})->where('priority', '!=', TicketPriority::Urgent->value);
 
 $results = $service->applyActionWithFilter(
     action: 'change_priority',
     query: $vipQuery,
-    params: ['priority' => 'high']
+    params: ['priority' => TicketPriority::High->value]
 );
 ```
 
@@ -519,7 +521,7 @@ class BulkActionJob implements ShouldQueue
 }
 
 // Usage
-BulkActionJob::dispatch('change_status', $ticketIds, ['status' => 'resolved']);
+BulkActionJob::dispatch('change_status', $ticketIds, ['status' => TicketStatus::Resolved->value]);
 ```
 
 ## Best Practices
@@ -538,7 +540,7 @@ BulkActionJob::dispatch('change_status', $ticketIds, ['status' => 'resolved']);
 The service provides comprehensive error handling:
 
 ```php
-$results = $service->applyAction('change_status', $ticketIds, ['status' => 'resolved']);
+$results = $service->applyAction('change_status', $ticketIds, ['status' => TicketStatus::Resolved->value]);
 
 // Check for failures
 if ($results['failed'] > 0) {

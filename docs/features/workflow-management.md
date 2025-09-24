@@ -20,6 +20,8 @@ Determine if a ticket can transition to a specific status.
 ```php
 use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketType;
 
 $service = app(WorkflowService::class);
 
@@ -263,7 +265,7 @@ Configure workflows in your `config/helpdesk.php` file:
             // Define custom transitions
         ]
     ],
-    'urgent' => [
+    'urgent' => [ // This is a workflow name, not a priority enum
         'name' => 'Urgent Ticket Workflow',
         'transitions' => [
             // Simplified workflow for urgent tickets
@@ -540,7 +542,7 @@ class WorkflowAutomationIntegration
             if ($ticket->priority === TicketPriority::Urgent) {
                 $availableAgent = User::role('senior-agent')
                     ->whereDoesntHave('assignedTickets', function ($query) {
-                        $query->whereIn('status', ['open', 'in_progress']);
+                        $query->whereIn('status', [TicketStatus::Open->value, TicketStatus::InProgress->value]);
                     })
                     ->first();
 

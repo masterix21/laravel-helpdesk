@@ -2,6 +2,11 @@
 
 Service Level Agreement (SLA) management ensures timely response and resolution of support tickets.
 
+```php
+use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+```
+
 ## Overview
 
 The SLA system automatically tracks response and resolution times, sends warnings when deadlines approach, and records breaches for reporting.
@@ -16,19 +21,19 @@ Configure SLA rules in `config/helpdesk.php`:
 'sla' => [
     'enabled' => true,
     'rules' => [
-        'urgent' => [
+        TicketPriority::Urgent->value => [
             'first_response' => 30,  // 30 minutes
             'resolution' => 240,     // 4 hours
         ],
-        'high' => [
+        TicketPriority::High->value => [
             'first_response' => 120, // 2 hours
             'resolution' => 480,     // 8 hours
         ],
-        'normal' => [
+        TicketPriority::Normal->value => [
             'first_response' => 240, // 4 hours
             'resolution' => 1440,    // 24 hours
         ],
-        'low' => [
+        TicketPriority::Low->value => [
             'first_response' => 480, // 8 hours
             'resolution' => 2880,    // 48 hours
         ],
@@ -43,13 +48,13 @@ Different ticket types can have custom SLA rules:
 ```php
 'type_overrides' => [
     'commercial' => [
-        'high' => [
+        TicketPriority::High->value => [
             'first_response' => 60,  // 1 hour for commercial inquiries
             'resolution' => 240,     // 4 hours
         ],
     ],
     'bug_report' => [
-        'urgent' => [
+        TicketPriority::Urgent->value => [
             'first_response' => 15,  // 15 minutes for urgent bugs
             'resolution' => 120,     // 2 hours
         ],
@@ -316,7 +321,7 @@ class CheckSlaCompliance extends Command
     public function handle(SlaService $slaService): void
     {
         $tickets = Ticket::query()
-            ->whereIn('status', ['open', 'in_progress'])
+            ->whereIn('status', [TicketStatus::Open->value, TicketStatus::InProgress->value])
             ->get();
 
         $this->info("Checking SLA for {$tickets->count()} tickets...");
@@ -415,7 +420,7 @@ class CustomSlaCalculator extends SlaService
 ```php
 // Consider your team's capacity
 'rules' => [
-    'urgent' => [
+    TicketPriority::Urgent->value => [
         'first_response' => 30,  // Achievable with proper staffing
         'resolution' => 240,     // Realistic for urgent issues
     ],
