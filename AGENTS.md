@@ -5,6 +5,7 @@
 - Publishable settings stay under `config/`; schema scaffolding sits in `database/migrations` and seed blueprints in `database/factories`.
 - Blade resources render from `resources/views`; automated tooling references `phpstan.neon.dist` and `phpunit.xml.dist`.
 - Tests live in `tests/` with the Pest bootstrap at `tests/Pest.php` and the shared base case in `tests/TestCase.php`.
+- The modular notification dispatcher resides in `src/Notifications/`; register channels via the container tag `helpdesk.notification_channels`.
 
 ## Build, Test, and Development Commands
 - `composer install` — install package dependencies for local development.

@@ -69,6 +69,16 @@ return [
         'ticket_commented' => false,
         'sla_warning' => true,
         'sla_breach' => true,
+        'channels' => [
+            'log' => [
+                'enabled' => false,
+                'level' => 'info',
+            ],
+            'mail' => [
+                'enabled' => false,
+                'to' => null,
+            ],
+        ],
     ],
 
     'rating' => [

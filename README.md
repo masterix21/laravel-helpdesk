@@ -1,60 +1,51 @@
-# Integrate Helpdesk features to any Laravel application
+# Laravel Helpdesk
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/masterix21/laravel-helpdesk.svg?style=flat-square)](https://packagist.org/packages/masterix21/laravel-helpdesk)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/masterix21/laravel-helpdesk/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/masterix21/laravel-helpdesk/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/masterix21/laravel-helpdesk/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/masterix21/laravel-helpdesk/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/masterix21/laravel-helpdesk.svg?style=flat-square)](https://packagist.org/packages/masterix21/laravel-helpdesk)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+A comprehensive helpdesk solution for Laravel applications with ticket management, SLA monitoring, knowledge base, and automation workflows.
 
-## Support us
+## 📚 Documentation
 
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/laravel-helpdesk.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/laravel-helpdesk)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+Full documentation is available in the [docs](docs/index.md) directory.
 
 ## Installation
-
-You can install the package via composer:
 
 ```bash
 composer require masterix21/laravel-helpdesk
 ```
-
-You can publish and run the migrations with:
 
 ```bash
 php artisan vendor:publish --tag="laravel-helpdesk-migrations"
 php artisan migrate
 ```
 
-You can publish the config file with:
-
 ```bash
 php artisan vendor:publish --tag="laravel-helpdesk-config"
 ```
 
-This is the contents of the published config file:
+## Quick Start
 
 ```php
-return [
-];
+use LucaLongo\LaravelHelpdesk\Facades\LaravelHelpdesk;
+use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
+
+// Create a ticket
+$ticket = LaravelHelpdesk::open([
+    'type' => 'product_support',
+    'subject' => 'Cannot access dashboard',
+    'description' => 'Getting error when trying to login...',
+    'priority' => 'high',
+]);
+
+// Transition status
+$ticketService = app(TicketService::class);
+$ticketService->transition($ticket, TicketStatus::Resolved);
 ```
 
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="laravel-helpdesk-views"
-```
-
-## Usage
-
-```php
-$laravelHelpdesk = new LucaLongo\LaravelHelpdesk();
-echo $laravelHelpdesk->echoPhrase('Hello, LucaLongo!');
-```
+See the [documentation](docs/index.md) for detailed usage and configuration options.
 
 ## Testing
 

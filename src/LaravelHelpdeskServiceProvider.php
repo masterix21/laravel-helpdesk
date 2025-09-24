@@ -2,6 +2,14 @@
 
 namespace LucaLongo\LaravelHelpdesk;
 
+use Illuminate\Support\Facades\Event;
+use LucaLongo\LaravelHelpdesk\Console\Commands\GenerateMetricsSnapshotCommand;
+use LucaLongo\LaravelHelpdesk\Events\TicketAssigned;
+use LucaLongo\LaravelHelpdesk\Events\TicketCreated;
+use LucaLongo\LaravelHelpdesk\Events\TicketStatusChanged;
+use LucaLongo\LaravelHelpdesk\Notifications\Channels\LoggingNotificationChannel;
+use LucaLongo\LaravelHelpdesk\Notifications\Channels\MailNotificationChannel;
+use LucaLongo\LaravelHelpdesk\Notifications\NotificationDispatcher;
 use LucaLongo\LaravelHelpdesk\Services\Automation\ActionExecutor;
 use LucaLongo\LaravelHelpdesk\Services\Automation\ConditionEvaluator;
 use LucaLongo\LaravelHelpdesk\Services\AutomationService;
@@ -23,6 +31,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-helpdesk')
             ->hasConfigFile()
+            ->hasTranslations()
             ->hasMigration('create_helpdesk_tickets_table')
             ->hasMigration('create_helpdesk_ticket_comments_table')
             ->hasMigration('create_helpdesk_ticket_attachments_table')
@@ -37,7 +46,8 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
             ->hasMigration('create_helpdesk_automation_executions_table')
             ->hasMigration('add_ticket_relations_columns')
             ->hasMigration('create_helpdesk_ticket_relations_table')
-            ->hasMigration('create_helpdesk_ticket_time_entries_table');
+            ->hasMigration('create_helpdesk_ticket_time_entries_table')
+            ->hasCommand(GenerateMetricsSnapshotCommand::class);
     }
 
     public function registeringPackage(): void
@@ -60,6 +70,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
         $this->app->singleton(AutomationService::class);
         $this->app->singleton(BulkActionService::class);
         $this->app->singleton(WorkflowService::class);
+        $this->app->singleton(NotificationDispatcher::class);
 
         $this->app->singleton('helpdesk.automation.evaluator', ConditionEvaluator::class);
         $this->app->singleton('helpdesk.automation.executor', ActionExecutor::class);
@@ -71,5 +82,29 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
                 $app->make(SubscriptionService::class)
             );
         });
+    }
+
+    public function packageBooted(): void
+    {
+        $this->registerNotificationChannels();
+
+        Event::listen(TicketCreated::class, NotificationDispatcher::class.'@onTicketCreated');
+        Event::listen(TicketAssigned::class, NotificationDispatcher::class.'@onTicketAssigned');
+        Event::listen(TicketStatusChanged::class, NotificationDispatcher::class.'@onTicketStatusChanged');
+    }
+
+    protected function registerNotificationChannels(): void
+    {
+        $channels = config('helpdesk.notifications.channels', []);
+
+        if ((bool) ($channels['log']['enabled'] ?? false)) {
+            $this->app->singleton(LoggingNotificationChannel::class);
+            $this->app->tag(LoggingNotificationChannel::class, 'helpdesk.notification_channels');
+        }
+
+        if ((bool) ($channels['mail']['enabled'] ?? false)) {
+            $this->app->singleton(MailNotificationChannel::class);
+            $this->app->tag(MailNotificationChannel::class, 'helpdesk.notification_channels');
+        }
     }
 }
