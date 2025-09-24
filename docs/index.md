@@ -28,16 +28,6 @@ Laravel Helpdesk is a comprehensive package that integrates full-featured helpde
 - [Knowledge Base](./features/knowledge-base.md)
 - [Workflow Management](./features/workflow-management.md)
 
-### Suggested New Features
-- [Customer Portal](./new-features/customer-portal.md)
-- [Multi-Channel Support](./new-features/multi-channel.md)
-- [AI-Powered Features](./new-features/ai-features.md)
-- [Advanced Analytics](./new-features/analytics.md)
-- [Team Collaboration](./new-features/team-collaboration.md)
-- [Mobile Support](./new-features/mobile-support.md)
-- [Integration Hub](./new-features/integration-hub.md)
-- [Performance Monitoring](./new-features/performance-monitoring.md)
-
 ### API Reference
 - [Service Classes](./api/services.md)
 - [Models](./api/models.md)
@@ -87,31 +77,6 @@ Laravel Helpdesk is a comprehensive package that integrates full-featured helpde
 - **Factory Support**: Database factories for testing
 - **Service-Oriented Design**: Clean separation of concerns with service classes
 
-### Suggested New Features
-
-#### 1. Customer Portal
-A self-service portal where customers can submit, track, and manage their tickets without agent intervention.
-
-#### 2. Multi-Channel Support
-Integration with email, SMS, social media, and live chat for ticket creation and communication.
-
-#### 3. AI-Powered Features
-Intelligent ticket routing, automated responses, sentiment analysis, and predictive analytics.
-
-#### 4. Advanced Analytics & Reporting
-Comprehensive dashboards, custom reports, trend analysis, and performance metrics.
-
-#### 5. Team Collaboration
-Real-time collaboration, internal chat, @mentions, and shared workspaces for agents.
-
-#### 6. Mobile Support
-Native mobile apps or Progressive Web App (PWA) for agents and customers.
-
-#### 7. Integration Hub
-Pre-built integrations with popular tools like Slack, Teams, JIRA, and CRM systems.
-
-#### 8. Performance Monitoring
-Agent performance tracking, quality assurance tools, and customer satisfaction surveys.
 
 ## Quick Links
 
