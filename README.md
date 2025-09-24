@@ -7,6 +7,16 @@
 
 A comprehensive helpdesk solution for Laravel applications with ticket management, SLA monitoring, knowledge base, and automation workflows.
 
+## ❤️ Support This Package
+
+Hey there! 👋 If this package saves you time or helps your business, consider buying me a coffee (or maybe a pizza? 🍕).
+
+Your support keeps me motivated to maintain this package and create more awesome open-source tools for the Laravel community!
+
+[![Sponsor](https://img.shields.io/badge/💖_Sponsor_Me-GitHub_Sponsors-ff69b4?style=for-the-badge)](https://github.com/sponsors/masterix21)
+
+Every sponsor gets a virtual high-five and eternal gratitude! 🙌
+
 ## 📚 Documentation
 
 Full documentation is available in the [docs](docs/index.md) directory.
