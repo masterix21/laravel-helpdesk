@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_ai_analyses', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('ticket_id')->constrained('helpdesk_tickets')->cascadeOnDelete();
+            $table->string('provider', 50)->nullable();
+            $table->string('model', 100)->nullable();
+            $table->string('sentiment', 20)->nullable();
+            $table->string('category', 50)->nullable();
+            $table->text('suggested_response')->nullable();
+            $table->json('keywords')->nullable();
+            $table->json('raw_response')->nullable();
+            $table->decimal('confidence', 3, 2)->nullable();
+            $table->integer('processing_time_ms')->nullable();
+            $table->timestamps();
+
+            $table->index(['ticket_id', 'created_at']);
+            $table->index('sentiment');
+            $table->index('category');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('helpdesk_ai_analyses');
+    }
+};

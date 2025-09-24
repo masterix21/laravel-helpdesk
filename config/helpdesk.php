@@ -303,4 +303,46 @@ return [
             ],
         ],
     ],
+
+    'ai' => [
+        'enabled' => env('HELPDESK_AI_ENABLED', false),
+
+        'providers' => [
+            'openai' => [
+                'enabled' => env('OPENAI_ENABLED', true),
+                'api_key' => env('OPENAI_API_KEY'),
+                'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+                'capabilities' => [
+                    'analyze_sentiment' => true,
+                    'suggest_response' => true,
+                    'auto_categorize' => true,
+                    'find_similar' => true,
+                ],
+            ],
+
+            'claude' => [
+                'enabled' => env('CLAUDE_ENABLED', true),
+                'api_key' => env('ANTHROPIC_API_KEY'),
+                'model' => env('CLAUDE_MODEL', 'claude-3-haiku-20240307'),
+                'capabilities' => [
+                    'analyze_sentiment' => true,
+                    'suggest_response' => true,
+                    'auto_categorize' => true,
+                    'find_similar' => true,
+                ],
+            ],
+
+            'gemini' => [
+                'enabled' => env('GEMINI_ENABLED', true),
+                'api_key' => env('GEMINI_API_KEY'),
+                'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+                'capabilities' => [
+                    'analyze_sentiment' => true,
+                    'suggest_response' => true,
+                    'auto_categorize' => true,
+                    'find_similar' => false,
+                ],
+            ],
+        ],
+    ],
 ];

@@ -21,6 +21,8 @@ use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
 use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
+use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -47,6 +49,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
             ->hasMigration('add_ticket_relations_columns')
             ->hasMigration('create_helpdesk_ticket_relations_table')
             ->hasMigration('create_helpdesk_ticket_time_entries_table')
+            ->hasMigration('create_helpdesk_ai_analyses_table')
             ->hasCommand(GenerateMetricsSnapshotCommand::class);
     }
 
@@ -58,11 +61,20 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
         $this->app->singleton(SubscriptionService::class);
         $this->app->singleton(TimeTrackingService::class);
 
+        // Register AI services
+        $this->app->singleton(AIProviderSelector::class);
+        $this->app->singleton(AIService::class, function ($app) {
+            return new AIService(
+                $app->make(AIProviderSelector::class)
+            );
+        });
+
         // Register services with proper dependency injection
         $this->app->singleton(TicketService::class, function ($app) {
             return new TicketService(
                 $app->make(SlaService::class),
-                $app->make(SubscriptionService::class)
+                $app->make(SubscriptionService::class),
+                config('helpdesk.ai.enabled') ? $app->make(AIService::class) : null
             );
         });
 

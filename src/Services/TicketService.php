@@ -17,12 +17,14 @@ use LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketRelation;
 use LucaLongo\LaravelHelpdesk\Support\HelpdeskConfig;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
 
 class TicketService
 {
     public function __construct(
         protected SlaService $slaService,
-        protected SubscriptionService $subscriptionService
+        protected SubscriptionService $subscriptionService,
+        protected ?AIService $aiService = null
     ) {}
 
     public function open(array $attributes, ?Model $openedBy = null): Ticket
@@ -58,6 +60,11 @@ class TicketService
         $ticket->save();
 
         event(new TicketCreated($ticket));
+
+        // AI Analysis if enabled
+        if ($this->aiService && config('helpdesk.ai.enabled')) {
+            $this->aiService->analyze($ticket);
+        }
 
         return $ticket->load(['opener', 'assignee']);
     }

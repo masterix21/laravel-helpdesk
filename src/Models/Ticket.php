@@ -149,6 +149,11 @@ class Ticket extends Model
         return $this->hasMany(TicketTimeEntry::class);
     }
 
+    public function aiAnalyses(): HasMany
+    {
+        return $this->hasMany(AIAnalysis::class);
+    }
+
     public function knowledgeArticles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(
@@ -527,5 +532,37 @@ class Ticket extends Model
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d H:i:s');
+    }
+
+    public function getLatestAIAnalysis(): ?AIAnalysis
+    {
+        return $this->aiAnalyses()->latest()->first();
+    }
+
+    public function analyzeWithAI(): ?AIAnalysis
+    {
+        if (! config('helpdesk.ai.enabled')) {
+            return null;
+        }
+
+        return app(\LucaLongo\LaravelHelpdesk\AI\AIService::class)->analyze($this);
+    }
+
+    public function getAISuggestedResponse(): ?string
+    {
+        if (! config('helpdesk.ai.enabled')) {
+            return null;
+        }
+
+        return app(\LucaLongo\LaravelHelpdesk\AI\AIService::class)->generateSuggestion($this);
+    }
+
+    public function findSimilarTickets(): ?array
+    {
+        if (! config('helpdesk.ai.enabled')) {
+            return null;
+        }
+
+        return app(\LucaLongo\LaravelHelpdesk\AI\AIService::class)->findSimilarTickets($this);
     }
 }
