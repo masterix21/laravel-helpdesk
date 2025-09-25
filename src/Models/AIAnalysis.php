@@ -44,7 +44,7 @@ class AIAnalysis extends Model
         ?string $model = null,
         ?int $processingTime = null
     ): self {
-        $analysis = new self();
+        $analysis = new self;
         $data = json_decode($response, true);
 
         if ($capabilities['analyze_sentiment'] ?? false) {
