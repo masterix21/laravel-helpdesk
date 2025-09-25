@@ -18,6 +18,7 @@ Laravel Helpdesk is a comprehensive package that integrates full-featured helpde
 - [Subscriptions & Notifications](./features/subscriptions-notifications.md)
 
 ### Advanced Features
+- [Voice Notes & Transcription](./features/voice-notes.md)
 - [AI-Powered Analysis](./features/ai-powered-analysis.md)
 - [SLA Management](./features/sla-management.md)
 - [Automation Rules](./features/automation-rules.md)
@@ -61,6 +62,7 @@ Laravel Helpdesk is a comprehensive package that integrates full-featured helpde
 - **Subscriptions**: User subscription system for ticket notifications
 
 #### Advanced Features
+- **Voice Notes & Transcription**: Create and respond to tickets with voice recordings, automatic transcription and emotional tone analysis
 - **AI-Powered Analysis**: Intelligent ticket analysis with sentiment detection and response suggestions
 - **SLA Management**: Service Level Agreement tracking with breach warnings
 - **Automation Engine**: Rule-based automation with conditions and actions
