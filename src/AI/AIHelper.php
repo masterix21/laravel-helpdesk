@@ -36,7 +36,7 @@ class AIHelper
         }
 
         return collect(config('helpdesk.ai.providers', []))
-            ->filter(fn($config) => ($config['enabled'] ?? false) && $config['api_key'])
+            ->filter(fn ($config) => ($config['enabled'] ?? false) && $config['api_key'])
             ->keys()
             ->all();
     }

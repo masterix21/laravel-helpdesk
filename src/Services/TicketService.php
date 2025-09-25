@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
 use LucaLongo\LaravelHelpdesk\Enums\TicketPriority;
 use LucaLongo\LaravelHelpdesk\Enums\TicketRelationType;
 use LucaLongo\LaravelHelpdesk\Enums\TicketStatus;
@@ -17,7 +18,6 @@ use LucaLongo\LaravelHelpdesk\Exceptions\InvalidTransitionException;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketRelation;
 use LucaLongo\LaravelHelpdesk\Support\HelpdeskConfig;
-use LucaLongo\LaravelHelpdesk\AI\AIService;
 
 class TicketService
 {

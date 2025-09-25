@@ -1,15 +1,10 @@
 <?php
 
-use LucaLongo\LaravelHelpdesk\AI\AIService;
-use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
-use LucaLongo\LaravelHelpdesk\Models\Ticket;
-use LucaLongo\LaravelHelpdesk\Models\AIAnalysis;
-use LucaLongo\LaravelHelpdesk\Events\TicketAnalyzedByAI;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Prism\Prism\Prism;
-use Mockery;
+use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
+use LucaLongo\LaravelHelpdesk\Models\Ticket;
 
 beforeEach(function () {
     Config::set('helpdesk.ai.enabled', true);
@@ -56,7 +51,7 @@ it('returns null when AI is disabled', function () {
 it('rotates providers using round robin', function () {
     Cache::forget('helpdesk.ai_provider_index');
 
-    $selector = new AIProviderSelector();
+    $selector = new AIProviderSelector;
 
     $provider1 = $selector->selectProvider();
     expect($provider1)->toBe('openai');
@@ -71,7 +66,7 @@ it('rotates providers using round robin', function () {
 it('filters providers by capability', function () {
     Config::set('helpdesk.ai.providers.claude.capabilities.find_similar', false);
 
-    $selector = new AIProviderSelector();
+    $selector = new AIProviderSelector;
 
     // Claude doesn't support find_similar
     $providers = [];

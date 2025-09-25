@@ -3,6 +3,8 @@
 namespace LucaLongo\LaravelHelpdesk;
 
 use Illuminate\Support\Facades\Event;
+use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
 use LucaLongo\LaravelHelpdesk\Console\Commands\GenerateMetricsSnapshotCommand;
 use LucaLongo\LaravelHelpdesk\Events\TicketAssigned;
 use LucaLongo\LaravelHelpdesk\Events\TicketCreated;
@@ -21,8 +23,6 @@ use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
 use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
-use LucaLongo\LaravelHelpdesk\AI\AIService;
-use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 

@@ -29,7 +29,7 @@ class AIProviderSelector
     private function getAvailableProviders(?string $capability): array
     {
         return collect(config('helpdesk.ai.providers', []))
-            ->filter(function($config) use ($capability) {
+            ->filter(function ($config) use ($capability) {
                 if (! ($config['enabled'] ?? false) || ! $config['api_key']) {
                     return false;
                 }
