@@ -312,11 +312,14 @@ return [
                 'enabled' => env('OPENAI_ENABLED', true),
                 'api_key' => env('OPENAI_API_KEY'),
                 'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+                'whisper_model' => env('OPENAI_WHISPER_MODEL', 'whisper-1'),
                 'capabilities' => [
                     'analyze_sentiment' => true,
                     'suggest_response' => true,
                     'auto_categorize' => true,
                     'find_similar' => true,
+                    'transcribe_audio' => true,
+                    'analyze_tone' => true,
                 ],
             ],
 
@@ -329,6 +332,8 @@ return [
                     'suggest_response' => true,
                     'auto_categorize' => true,
                     'find_similar' => true,
+                    'transcribe_audio' => false,
+                    'analyze_tone' => true,
                 ],
             ],
 
@@ -341,8 +346,28 @@ return [
                     'suggest_response' => true,
                     'auto_categorize' => true,
                     'find_similar' => false,
+                    'transcribe_audio' => false,
+                    'analyze_tone' => true,
                 ],
             ],
+        ],
+    ],
+
+    'voice_notes' => [
+        'enabled' => env('HELPDESK_VOICE_NOTES_ENABLED', true),
+        'storage_disk' => env('HELPDESK_VOICE_STORAGE_DISK', 'local'),
+        'storage_path' => 'helpdesk/voice-notes',
+        'max_file_size' => env('HELPDESK_VOICE_MAX_FILE_SIZE', 25600), // KB (default 25MB)
+        'max_duration' => env('HELPDESK_VOICE_MAX_DURATION', 300), // seconds (default 5 minutes)
+        'allowed_formats' => ['mp3', 'wav', 'ogg', 'm4a', 'webm'],
+        'analyze_tone_by_default' => env('HELPDESK_VOICE_ANALYZE_TONE', true),
+        'auto_retry_failed' => env('HELPDESK_VOICE_AUTO_RETRY', true),
+        'retry_after_minutes' => 30,
+        'cleanup_after_days' => env('HELPDESK_VOICE_CLEANUP_DAYS', 90), // set to 0 to disable cleanup
+
+        'transcription' => [
+            'queue' => env('HELPDESK_VOICE_QUEUE', 'default'),
+            'language' => env('HELPDESK_VOICE_LANGUAGE', null), // null for auto-detect, or 'en', 'it', etc.
         ],
     ],
 ];

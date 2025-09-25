@@ -5,6 +5,9 @@ namespace LucaLongo\LaravelHelpdesk\AI;
 use LucaLongo\LaravelHelpdesk\Events\TicketAnalyzedByAI;
 use LucaLongo\LaravelHelpdesk\Models\AIAnalysis;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
+use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
+use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
+use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
 use Prism\Prism\Prism;
 use Prism\Prism\Enums\Provider;
 use Exception;
@@ -12,8 +15,13 @@ use Exception;
 class AIService
 {
     public function __construct(
-        private AIProviderSelector $selector
-    ) {}
+        private AIProviderSelector $selector,
+        private ?TranscriptionService $transcription = null,
+        private ?ToneAnalysisService $toneAnalysis = null
+    ) {
+        $this->transcription = $transcription ?? app(TranscriptionService::class);
+        $this->toneAnalysis = $toneAnalysis ?? app(ToneAnalysisService::class);
+    }
 
     public function analyze(Ticket $ticket): ?AIAnalysis
     {
@@ -169,6 +177,72 @@ Ticket Subject: {$ticket->subject}
 Ticket Description: {$ticket->description}
 
 Return only valid JSON without any markdown formatting or additional text.";
+    }
+
+    public function processVoiceNote(VoiceNote $voiceNote): array
+    {
+        if (!config('helpdesk.voice_notes.enabled')) {
+            throw new Exception('Voice notes feature is not enabled');
+        }
+
+        $results = [
+            'transcription' => null,
+            'tone_analysis' => null,
+            'errors' => [],
+        ];
+
+        try {
+            $transcriptionResult = $this->transcription->transcribe($voiceNote);
+            $results['transcription'] = $transcriptionResult;
+
+            $voiceNote->markAsTranscribed(
+                $transcriptionResult->text,
+                $transcriptionResult->provider,
+                $transcriptionResult->model
+            );
+
+            if ($voiceNote->analyze_tone && $transcriptionResult->text) {
+                try {
+                    $toneResult = $this->toneAnalysis->analyzeTone($transcriptionResult->text);
+                    $results['tone_analysis'] = $toneResult;
+
+                    $voiceNote->markAsAnalyzed($toneResult->tone);
+                } catch (Exception $e) {
+                    $results['errors'][] = "Tone analysis failed: {$e->getMessage()}";
+                }
+            }
+        } catch (Exception $e) {
+            $voiceNote->markAsFailed($e->getMessage());
+            throw $e;
+        }
+
+        return $results;
+    }
+
+    public function transcribeVoiceNote(VoiceNote $voiceNote): ?string
+    {
+        try {
+            $result = $this->transcription->transcribe($voiceNote);
+            return $result->text;
+        } catch (Exception $e) {
+            report($e);
+            return null;
+        }
+    }
+
+    public function analyzeVoiceNoteTone(VoiceNote $voiceNote): ?string
+    {
+        if (!$voiceNote->transcription) {
+            return null;
+        }
+
+        try {
+            $result = $this->toneAnalysis->analyzeTone($voiceNote->transcription);
+            return $result->tone->value;
+        } catch (Exception $e) {
+            report($e);
+            return null;
+        }
     }
 
     private function getPrismProvider(string $provider): Provider

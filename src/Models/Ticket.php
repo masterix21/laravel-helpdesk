@@ -170,6 +170,11 @@ class Ticket extends Model
         return $this->hasMany(KnowledgeSuggestion::class);
     }
 
+    public function voiceNote(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(VoiceNote::class, 'notable');
+    }
+
     public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(

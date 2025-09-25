@@ -21,8 +21,13 @@ use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
 use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
+use LucaLongo\LaravelHelpdesk\Services\VoiceNoteService;
 use LucaLongo\LaravelHelpdesk\AI\AIService;
 use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
+use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
+use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
+use LucaLongo\LaravelHelpdesk\AI\Contracts\TranscribableContract;
+use LucaLongo\LaravelHelpdesk\AI\Adapters\OpenaiTranscriptionAdapter;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -50,6 +55,7 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
             ->hasMigration('create_helpdesk_ticket_relations_table')
             ->hasMigration('create_helpdesk_ticket_time_entries_table')
             ->hasMigration('create_helpdesk_ai_analyses_table')
+            ->hasMigration('create_helpdesk_voice_notes_table')
             ->hasCommand(GenerateMetricsSnapshotCommand::class);
     }
 
@@ -63,10 +69,28 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
 
         // Register AI services
         $this->app->singleton(AIProviderSelector::class);
+        $this->app->singleton(TranscriptionService::class);
+        $this->app->singleton(ToneAnalysisService::class);
+
         $this->app->singleton(AIService::class, function ($app) {
             return new AIService(
-                $app->make(AIProviderSelector::class)
+                $app->make(AIProviderSelector::class),
+                $app->make(TranscriptionService::class),
+                $app->make(ToneAnalysisService::class)
             );
+        });
+
+        // Register Voice Note services
+        $this->app->singleton(VoiceNoteService::class);
+
+        // Bind transcription adapter based on config
+        $this->app->bind(TranscribableContract::class, function ($app) {
+            $provider = config('helpdesk.voice_notes.transcription.provider', 'openai');
+
+            return match($provider) {
+                'openai' => new OpenaiTranscriptionAdapter(),
+                default => new OpenaiTranscriptionAdapter(),
+            };
         });
 
         // Register services with proper dependency injection

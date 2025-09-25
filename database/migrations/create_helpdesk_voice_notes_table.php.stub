@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('helpdesk_voice_notes', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('notable');
+            $table->foreignId('ticket_id')->nullable()->constrained('helpdesk_tickets')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('file_path');
+            $table->string('mime_type');
+            $table->integer('duration_seconds')->nullable();
+            $table->integer('file_size');
+            $table->string('status')->default('pending');
+            $table->text('transcription')->nullable();
+            $table->string('emotional_tone')->nullable();
+            $table->boolean('analyze_tone')->default(true);
+            $table->string('ai_provider')->nullable();
+            $table->string('ai_model')->nullable();
+            $table->integer('processing_attempts')->default(0);
+            $table->text('last_error')->nullable();
+            $table->timestamp('processed_at')->nullable();
+            $table->timestamps();
+
+            $table->index('status');
+            $table->index('ticket_id');
+        });
+    }
+};

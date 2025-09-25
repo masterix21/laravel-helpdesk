@@ -35,4 +35,9 @@ class TicketComment extends Model
     {
         return $this->morphTo('author');
     }
+
+    public function voiceNote(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(VoiceNote::class, 'notable');
+    }
 }

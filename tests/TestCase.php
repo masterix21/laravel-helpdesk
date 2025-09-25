@@ -63,6 +63,8 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/add_ticket_relations_columns.php.stub',
             __DIR__.'/../database/migrations/create_helpdesk_ticket_relations_table.php.stub',
             __DIR__.'/../database/migrations/create_helpdesk_ticket_time_entries_table.php.stub',
+            __DIR__.'/../database/migrations/create_helpdesk_ai_analyses_table.php.stub',
+            __DIR__.'/../database/migrations/create_helpdesk_voice_notes_table.php.stub',
         ] as $migrationPath) {
             if ($isSqlite && str_contains($migrationPath, 'create_helpdesk_knowledge_articles_table.php.stub')) {
                 $this->createKnowledgeArticlesTableForSqlite();
