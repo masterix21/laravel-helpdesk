@@ -3,6 +3,12 @@
 namespace LucaLongo\LaravelHelpdesk;
 
 use Illuminate\Support\Facades\Event;
+use LucaLongo\LaravelHelpdesk\AI\Adapters\OpenaiTranscriptionAdapter;
+use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
+use LucaLongo\LaravelHelpdesk\AI\AIService;
+use LucaLongo\LaravelHelpdesk\AI\Contracts\TranscribableContract;
+use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
+use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
 use LucaLongo\LaravelHelpdesk\Console\Commands\GenerateMetricsSnapshotCommand;
 use LucaLongo\LaravelHelpdesk\Events\TicketAssigned;
 use LucaLongo\LaravelHelpdesk\Events\TicketCreated;
@@ -20,14 +26,8 @@ use LucaLongo\LaravelHelpdesk\Services\SlaService;
 use LucaLongo\LaravelHelpdesk\Services\SubscriptionService;
 use LucaLongo\LaravelHelpdesk\Services\TicketService;
 use LucaLongo\LaravelHelpdesk\Services\TimeTrackingService;
-use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
 use LucaLongo\LaravelHelpdesk\Services\VoiceNoteService;
-use LucaLongo\LaravelHelpdesk\AI\AIService;
-use LucaLongo\LaravelHelpdesk\AI\AIProviderSelector;
-use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
-use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
-use LucaLongo\LaravelHelpdesk\AI\Contracts\TranscribableContract;
-use LucaLongo\LaravelHelpdesk\AI\Adapters\OpenaiTranscriptionAdapter;
+use LucaLongo\LaravelHelpdesk\Services\WorkflowService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -87,9 +87,9 @@ class LaravelHelpdeskServiceProvider extends PackageServiceProvider
         $this->app->bind(TranscribableContract::class, function ($app) {
             $provider = config('helpdesk.voice_notes.transcription.provider', 'openai');
 
-            return match($provider) {
-                'openai' => new OpenaiTranscriptionAdapter(),
-                default => new OpenaiTranscriptionAdapter(),
+            return match ($provider) {
+                'openai' => new OpenaiTranscriptionAdapter,
+                default => new OpenaiTranscriptionAdapter,
             };
         });
 

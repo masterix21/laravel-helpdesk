@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 use LucaLongo\LaravelHelpdesk\Jobs\ProcessVoiceNoteJob;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketComment;
 use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
-use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 
 class VoiceNoteService
 {
@@ -26,7 +26,7 @@ class VoiceNoteService
         UploadedFile $file,
         int $userId,
         Model $notable,
-        bool $analyzeTone = null
+        ?bool $analyzeTone = null
     ): VoiceNote {
         $this->validateFile($file);
 
@@ -81,7 +81,7 @@ class VoiceNoteService
 
         $voiceNote->refresh();
 
-        if (!$voiceNote->transcription) {
+        if (! $voiceNote->transcription) {
             throw new Exception('Failed to transcribe voice note');
         }
 
@@ -114,7 +114,7 @@ class VoiceNoteService
 
         $voiceNote->refresh();
 
-        if (!$voiceNote->transcription) {
+        if (! $voiceNote->transcription) {
             throw new Exception('Failed to transcribe voice note');
         }
 
@@ -128,7 +128,7 @@ class VoiceNoteService
 
     public function retryFailed(): int
     {
-        if (!($this->config['auto_retry_failed'] ?? true)) {
+        if (! ($this->config['auto_retry_failed'] ?? true)) {
             return 0;
         }
 
@@ -153,7 +153,7 @@ class VoiceNoteService
     {
         $cleanupDays = $this->config['cleanup_after_days'] ?? 90;
 
-        if (!$cleanupDays) {
+        if (! $cleanupDays) {
             return 0;
         }
 
@@ -189,7 +189,7 @@ class VoiceNoteService
         }
 
         $extension = $file->getClientOriginalExtension();
-        if (!in_array(strtolower($extension), $allowedFormats)) {
+        if (! in_array(strtolower($extension), $allowedFormats)) {
             throw new Exception(sprintf(
                 'File format %s is not allowed. Allowed formats: %s',
                 $extension,

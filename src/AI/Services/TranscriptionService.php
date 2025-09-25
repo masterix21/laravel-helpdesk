@@ -25,13 +25,13 @@ class TranscriptionService
     {
         $provider = $this->selector->selectProvider('transcribe_audio');
 
-        if (!$provider) {
+        if (! $provider) {
             throw new Exception('No AI provider available for audio transcription');
         }
 
         $adapter = $this->getAdapter($provider);
 
-        if (!$adapter->supportsFormat($voiceNote->mime_type)) {
+        if (! $adapter->supportsFormat($voiceNote->mime_type)) {
             throw new Exception("Audio format {$voiceNote->mime_type} not supported by {$provider}");
         }
 
@@ -45,7 +45,7 @@ class TranscriptionService
 
         $filePath = $this->getFilePath($voiceNote);
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             throw new Exception("Audio file not found at: {$filePath}");
         }
 
@@ -57,7 +57,7 @@ class TranscriptionService
                 $this->config['transcription']['language'] ?? null
             );
 
-            $processingTime = (int)((microtime(true) - $startTime) * 1000);
+            $processingTime = (int) ((microtime(true) - $startTime) * 1000);
 
             return new TranscriptionResult(
                 text: $result->text,
@@ -97,7 +97,7 @@ class TranscriptionService
     {
         $errors = [];
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $errors[] = 'File not found';
         }
 
@@ -108,7 +108,7 @@ class TranscriptionService
             $errors[] = sprintf('File size exceeds maximum of %d MB', $maxSize / 1024 / 1024);
         }
 
-        if (!in_array($mimeType, $this->config['allowed_formats'] ?? [])) {
+        if (! in_array($mimeType, $this->config['allowed_formats'] ?? [])) {
             $errors[] = sprintf('Format %s not allowed', $mimeType);
         }
 
@@ -117,9 +117,9 @@ class TranscriptionService
 
     private function getAdapter(string $provider): TranscribableContract
     {
-        $adapterClass = "LucaLongo\\LaravelHelpdesk\\AI\\Adapters\\" . ucfirst($provider) . "TranscriptionAdapter";
+        $adapterClass = 'LucaLongo\\LaravelHelpdesk\\AI\\Adapters\\'.ucfirst($provider).'TranscriptionAdapter';
 
-        if (!class_exists($adapterClass)) {
+        if (! class_exists($adapterClass)) {
             throw new Exception("Adapter not found for provider: {$provider}");
         }
 

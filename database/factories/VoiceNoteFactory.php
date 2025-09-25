@@ -3,10 +3,10 @@
 namespace LucaLongo\LaravelHelpdesk\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
-use LucaLongo\LaravelHelpdesk\Models\Ticket;
-use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 use LucaLongo\LaravelHelpdesk\Enums\EmotionalTone;
+use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
+use LucaLongo\LaravelHelpdesk\Models\Ticket;
+use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
 
 class VoiceNoteFactory extends Factory
 {
@@ -22,7 +22,7 @@ class VoiceNoteFactory extends Factory
             'notable_id' => $ticket,
             'ticket_id' => $ticket,
             'user_id' => $userModel::factory(),
-            'file_path' => 'helpdesk/voice-notes/' . $this->faker->uuid() . '.mp3',
+            'file_path' => 'helpdesk/voice-notes/'.$this->faker->uuid().'.mp3',
             'mime_type' => $this->faker->randomElement(['audio/mpeg', 'audio/wav', 'audio/ogg']),
             'duration_seconds' => $this->faker->numberBetween(5, 300),
             'file_size' => $this->faker->numberBetween(50000, 5000000),

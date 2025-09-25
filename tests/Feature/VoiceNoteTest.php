@@ -4,8 +4,8 @@ namespace LucaLongo\LaravelHelpdesk\Tests\Feature;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
-use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 use LucaLongo\LaravelHelpdesk\Enums\EmotionalTone;
+use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 use LucaLongo\LaravelHelpdesk\Jobs\ProcessVoiceNoteJob;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\TicketComment;
@@ -152,6 +152,7 @@ class VoiceNoteTest extends TestCase
     protected function createUser()
     {
         $userModel = config('helpdesk.user_model');
+
         return $userModel::factory()->create();
     }
 }

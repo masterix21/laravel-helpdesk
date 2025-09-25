@@ -2,15 +2,15 @@
 
 namespace LucaLongo\LaravelHelpdesk\AI;
 
+use Exception;
+use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
+use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
 use LucaLongo\LaravelHelpdesk\Events\TicketAnalyzedByAI;
 use LucaLongo\LaravelHelpdesk\Models\AIAnalysis;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
-use LucaLongo\LaravelHelpdesk\AI\Services\TranscriptionService;
-use LucaLongo\LaravelHelpdesk\AI\Services\ToneAnalysisService;
-use Prism\Prism\Prism;
 use Prism\Prism\Enums\Provider;
-use Exception;
+use Prism\Prism\Prism;
 
 class AIService
 {
@@ -75,6 +75,7 @@ class AIService
 
         } catch (Exception $e) {
             report($e);
+
             return null;
         }
     }
@@ -108,6 +109,7 @@ class AIService
 
         } catch (Exception $e) {
             report($e);
+
             return null;
         }
     }
@@ -126,15 +128,15 @@ class AIService
 
         return Ticket::query()
             ->where('id', '!=', $ticket->id)
-            ->where(function($query) use ($analysis) {
+            ->where(function ($query) use ($analysis) {
                 foreach ($analysis->keywords as $keyword) {
                     $query->orWhere('subject', 'like', "%{$keyword}%")
-                          ->orWhere('description', 'like', "%{$keyword}%");
+                        ->orWhere('description', 'like', "%{$keyword}%");
                 }
             })
             ->take(5)
             ->get()
-            ->map(fn($t) => [
+            ->map(fn ($t) => [
                 'id' => $t->id,
                 'subject' => $t->subject,
                 'status' => $t->status,
@@ -167,7 +169,7 @@ class AIService
             return null;
         }
 
-        $jsonStructure = "{\n  " . implode(",\n  ", $tasks) . "\n}";
+        $jsonStructure = "{\n  ".implode(",\n  ", $tasks)."\n}";
 
         return "Analyze this support ticket and provide a JSON response with the following structure:
 
@@ -181,7 +183,7 @@ Return only valid JSON without any markdown formatting or additional text.";
 
     public function processVoiceNote(VoiceNote $voiceNote): array
     {
-        if (!config('helpdesk.voice_notes.enabled')) {
+        if (! config('helpdesk.voice_notes.enabled')) {
             throw new Exception('Voice notes feature is not enabled');
         }
 
@@ -223,31 +225,35 @@ Return only valid JSON without any markdown formatting or additional text.";
     {
         try {
             $result = $this->transcription->transcribe($voiceNote);
+
             return $result->text;
         } catch (Exception $e) {
             report($e);
+
             return null;
         }
     }
 
     public function analyzeVoiceNoteTone(VoiceNote $voiceNote): ?string
     {
-        if (!$voiceNote->transcription) {
+        if (! $voiceNote->transcription) {
             return null;
         }
 
         try {
             $result = $this->toneAnalysis->analyzeTone($voiceNote->transcription);
+
             return $result->tone->value;
         } catch (Exception $e) {
             report($e);
+
             return null;
         }
     }
 
     private function getPrismProvider(string $provider): Provider
     {
-        return match($provider) {
+        return match ($provider) {
             'openai' => Provider::OpenAI,
             'claude' => Provider::Anthropic,
             'gemini' => Provider::Google,

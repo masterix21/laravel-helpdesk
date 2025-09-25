@@ -2,10 +2,10 @@
 
 namespace LucaLongo\LaravelHelpdesk\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LucaLongo\LaravelHelpdesk\Database\Factories\VoiceNoteFactory;
 use LucaLongo\LaravelHelpdesk\Enums\EmotionalTone;
 use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;

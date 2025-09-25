@@ -19,12 +19,12 @@ class EmotionalToneResult
 
     public function hasSecondaryTones(): bool
     {
-        return !empty($this->secondaryTones);
+        return ! empty($this->secondaryTones);
     }
 
     public function hasIndicators(): bool
     {
-        return !empty($this->indicators);
+        return ! empty($this->indicators);
     }
 
     public function isHighConfidence(): bool
@@ -39,7 +39,7 @@ class EmotionalToneResult
 
     public function getDominantIndicators(int $limit = 3): array
     {
-        if (!$this->hasIndicators()) {
+        if (! $this->hasIndicators()) {
             return [];
         }
 

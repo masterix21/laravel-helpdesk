@@ -10,7 +10,9 @@ use LucaLongo\LaravelHelpdesk\AI\Results\TranscriptionResult;
 class OpenaiTranscriptionAdapter implements TranscribableContract
 {
     private string $apiKey;
+
     private string $model;
+
     private array $supportedFormats = [
         'audio/mpeg',
         'audio/mp3',
@@ -28,7 +30,7 @@ class OpenaiTranscriptionAdapter implements TranscribableContract
         $this->apiKey = config('helpdesk.ai.providers.openai.api_key');
         $this->model = config('helpdesk.ai.providers.openai.whisper_model', 'whisper-1');
 
-        if (!$this->apiKey) {
+        if (! $this->apiKey) {
             throw new Exception('OpenAI API key not configured');
         }
     }
@@ -48,12 +50,12 @@ class OpenaiTranscriptionAdapter implements TranscribableContract
                     'timestamp_granularities' => ['segment', 'word'],
                 ]));
 
-            if (!$response->successful()) {
-                throw new Exception('OpenAI API error: ' . $response->body());
+            if (! $response->successful()) {
+                throw new Exception('OpenAI API error: '.$response->body());
             }
 
             $data = $response->json();
-            $processingTime = (int)((microtime(true) - $startTime) * 1000);
+            $processingTime = (int) ((microtime(true) - $startTime) * 1000);
 
             $alternatives = null;
             if (isset($data['words'])) {
@@ -62,7 +64,7 @@ class OpenaiTranscriptionAdapter implements TranscribableContract
 
             $segments = null;
             if (isset($data['segments'])) {
-                $segments = array_map(fn($segment) => [
+                $segments = array_map(fn ($segment) => [
                     'start' => $segment['start'] ?? 0,
                     'end' => $segment['end'] ?? 0,
                     'text' => $segment['text'] ?? '',
@@ -102,12 +104,13 @@ class OpenaiTranscriptionAdapter implements TranscribableContract
     public function getMaxFileSize(): int
     {
         $maxSizeKb = config('helpdesk.voice_notes.max_file_size', 25600); // Default 25 MB
+
         return $maxSizeKb * 1024;
     }
 
     private function calculateConfidence(array $data): float
     {
-        if (!isset($data['words'])) {
+        if (! isset($data['words'])) {
             return 0.85;
         }
 
@@ -135,7 +138,7 @@ class OpenaiTranscriptionAdapter implements TranscribableContract
 
     private function extractAlternatives(array $words): ?array
     {
-        $lowConfidenceWords = array_filter($words, function($word) {
+        $lowConfidenceWords = array_filter($words, function ($word) {
             return isset($word['probability']) && $word['probability'] < 0.8;
         });
 

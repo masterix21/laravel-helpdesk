@@ -8,8 +8,8 @@ use LucaLongo\LaravelHelpdesk\AI\Results\EmotionalToneResult;
 use LucaLongo\LaravelHelpdesk\Enums\EmotionalTone;
 use LucaLongo\LaravelHelpdesk\Models\Ticket;
 use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
-use Prism\Prism\Prism;
 use Prism\Prism\Enums\Provider;
+use Prism\Prism\Prism;
 
 class ToneAnalysisService
 {
@@ -21,7 +21,7 @@ class ToneAnalysisService
     {
         $provider = $this->selector->selectProvider('analyze_tone');
 
-        if (!$provider) {
+        if (! $provider) {
             throw new Exception('No AI provider available for tone analysis');
         }
 
@@ -53,11 +53,11 @@ class ToneAnalysisService
                 ->withTemperature(0.3)
                 ->generate();
 
-            $processingTime = (int)((microtime(true) - $startTime) * 1000);
+            $processingTime = (int) ((microtime(true) - $startTime) * 1000);
 
             $analysis = json_decode($result->text, true);
 
-            if (!$analysis || !isset($analysis['tone'])) {
+            if (! $analysis || ! isset($analysis['tone'])) {
                 throw new Exception('Invalid response from AI provider');
             }
 
@@ -147,7 +147,7 @@ class ToneAnalysisService
 
     public function analyzeVoiceNote(VoiceNote $voiceNote): EmotionalToneResult
     {
-        if (!$voiceNote->transcription) {
+        if (! $voiceNote->transcription) {
             throw new Exception('Voice note has not been transcribed yet');
         }
 
@@ -156,7 +156,7 @@ class ToneAnalysisService
 
     private function buildToneAnalysisPrompt(string $text): string
     {
-        $tones = implode(', ', array_map(fn($case) => $case->value, EmotionalTone::cases()));
+        $tones = implode(', ', array_map(fn ($case) => $case->value, EmotionalTone::cases()));
 
         return "Analyze the emotional tone of the following text and provide a JSON response with this structure:
 {
@@ -177,7 +177,7 @@ Return only valid JSON without any markdown formatting or additional text.";
 
     private function getPrismProvider(string $provider): Provider
     {
-        return match($provider) {
+        return match ($provider) {
             'openai' => Provider::OpenAI,
             'claude' => Provider::Anthropic,
             'gemini' => Provider::Google,

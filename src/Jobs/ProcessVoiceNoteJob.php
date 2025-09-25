@@ -9,16 +9,18 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use LucaLongo\LaravelHelpdesk\AI\AIService;
+use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 use LucaLongo\LaravelHelpdesk\Events\VoiceNoteProcessed;
 use LucaLongo\LaravelHelpdesk\Models\VoiceNote;
-use LucaLongo\LaravelHelpdesk\Enums\VoiceNoteStatus;
 
 class ProcessVoiceNoteJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [60, 180, 600];
+
     public $timeout = 300;
 
     public function __construct(
@@ -27,7 +29,7 @@ class ProcessVoiceNoteJob implements ShouldQueue
 
     public function handle(AIService $aiService): void
     {
-        if (!$this->voiceNote->canProcess()) {
+        if (! $this->voiceNote->canProcess()) {
             return;
         }
 
@@ -37,7 +39,7 @@ class ProcessVoiceNoteJob implements ShouldQueue
         try {
             $results = $aiService->processVoiceNote($this->voiceNote);
 
-            if (!empty($results['errors'])) {
+            if (! empty($results['errors'])) {
                 foreach ($results['errors'] as $error) {
                     report(new Exception($error));
                 }
@@ -75,8 +77,8 @@ class ProcessVoiceNoteJob implements ShouldQueue
     {
         return [
             'voice-note',
-            'voice-note:' . $this->voiceNote->id,
-            'ticket:' . $this->voiceNote->ticket_id,
+            'voice-note:'.$this->voiceNote->id,
+            'ticket:'.$this->voiceNote->ticket_id,
         ];
     }
 }

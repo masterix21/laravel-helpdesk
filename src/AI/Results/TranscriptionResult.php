@@ -18,12 +18,12 @@ class TranscriptionResult
 
     public function hasAlternatives(): bool
     {
-        return !empty($this->alternatives);
+        return ! empty($this->alternatives);
     }
 
     public function hasSegments(): bool
     {
-        return !empty($this->segments);
+        return ! empty($this->segments);
     }
 
     public function getHighConfidenceText(): string
