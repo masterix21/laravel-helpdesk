@@ -1,4 +1,4 @@
-# AI-Powered Analysis
+# AI-Powered Analysis (unreleased)
 
 Laravel Helpdesk integrates AI capabilities to provide intelligent ticket analysis, automatic categorization, and response suggestions through multiple AI providers.
 
@@ -8,9 +8,6 @@ The AI system uses [Prism PHP](https://github.com/prism-php/prism) to provide a 
 
 ## Requirements
 
-- PHP 8.4+
-- Laravel 11.0+ or 12.0+
-- Prism PHP 0.89.0+ (automatically installed)
 - At least one AI provider API key
 
 ## Configuration
